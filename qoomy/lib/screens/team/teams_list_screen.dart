@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qoomy/providers/auth_provider.dart';
+import 'package:qoomy/providers/locale_provider.dart';
 import 'package:qoomy/providers/team_provider.dart';
 import 'package:qoomy/models/team_model.dart';
 import 'package:qoomy/config/theme.dart';
