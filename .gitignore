@@ -1,0 +1,39 @@
+# Secrets and credentials
+*.json
+!pubspec.json
+!package.json
+!firebase.json
+!tsconfig.json
+client_secret*.json
+
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+*.iml
+.idea/
+*.log
+
+# Firebase
+.firebase/
+firebase-debug.log
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+nul
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# Generated files
+*.g.dart
+*.freezed.dart
+
+# Claude
+.claude/

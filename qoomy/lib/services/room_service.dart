@@ -1,0 +1,284 @@
+import 'dart:math';
+import 'dart:typed_data';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:qoomy/models/room_model.dart';
+import 'package:qoomy/models/chat_message_model.dart';
+
+class RoomService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  CollectionReference<Map<String, dynamic>> get _roomsCollection =>
+      _firestore.collection('rooms');
+
+  String _generateRoomCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final random = Random.secure();
+    return List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
+  }
+
+  Future<String?> _uploadImage(String roomCode, Uint8List imageBytes) async {
+    try {
+      final ref = _storage.ref().child('rooms/$roomCode/question_image.jpg');
+      await ref.putData(imageBytes, SettableMetadata(contentType: 'image/jpeg'));
+      return await ref.getDownloadURL();
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
+  }
+
+  Future<String> createRoom({
+    required String hostId,
+    required String hostName,
+    required EvaluationMode evaluationMode,
+    required String question,
+    required String answer,
+    String? comment,
+    Uint8List? imageBytes,
+  }) async {
+    String roomCode;
+    bool codeExists = true;
+
+    do {
+      roomCode = _generateRoomCode();
+      final doc = await _roomsCollection.doc(roomCode).get();
+      codeExists = doc.exists;
+    } while (codeExists);
+
+    // Upload image if provided
+    String? imageUrl;
+    if (imageBytes != null) {
+      imageUrl = await _uploadImage(roomCode, imageBytes);
+    }
+
+    final room = RoomModel(
+      code: roomCode,
+      hostId: hostId,
+      hostName: hostName,
+      status: RoomStatus.playing,
+      evaluationMode: evaluationMode,
+      question: question,
+      answer: answer,
+      comment: comment,
+      imageUrl: imageUrl,
+      createdAt: DateTime.now(),
+    );
+
+    await _roomsCollection.doc(roomCode).set(room.toFirestore());
+
+    return roomCode;
+  }
+
+  Future<RoomModel?> getRoom(String roomCode) async {
+    final doc = await _roomsCollection.doc(roomCode).get();
+    if (!doc.exists) return null;
+
+    final playersSnapshot = await _roomsCollection
+        .doc(roomCode)
+        .collection('players')
+        .orderBy('joinedAt')
+        .get();
+
+    final players = playersSnapshot.docs
+        .map((doc) => Player.fromFirestore(doc))
+        .toList();
+
+    return RoomModel.fromFirestore(doc, players);
+  }
+
+  Stream<RoomModel?> roomStream(String roomCode) {
+    return _roomsCollection.doc(roomCode).snapshots().asyncMap((doc) async {
+      if (!doc.exists) return null;
+
+      final playersSnapshot = await _roomsCollection
+          .doc(roomCode)
+          .collection('players')
+          .orderBy('joinedAt')
+          .get();
+
+      final players = playersSnapshot.docs
+          .map((doc) => Player.fromFirestore(doc))
+          .toList();
+
+      return RoomModel.fromFirestore(doc, players);
+    });
+  }
+
+  Stream<List<Player>> playersStream(String roomCode) {
+    return _roomsCollection
+        .doc(roomCode)
+        .collection('players')
+        .orderBy('score', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Player.fromFirestore(doc)).toList());
+  }
+
+  Future<bool> joinRoom({
+    required String roomCode,
+    required String playerId,
+    required String playerName,
+  }) async {
+    final room = await getRoom(roomCode);
+    if (room == null) return false;
+    // Allow joining rooms that are waiting or playing (game starts immediately)
+    if (room.status == RoomStatus.finished) return false;
+
+    final player = Player(
+      id: playerId,
+      name: playerName,
+      joinedAt: DateTime.now(),
+    );
+
+    await _roomsCollection
+        .doc(roomCode)
+        .collection('players')
+        .doc(playerId)
+        .set(player.toFirestore());
+
+    return true;
+  }
+
+  Future<void> leaveRoom(String roomCode, String playerId) async {
+    await _roomsCollection
+        .doc(roomCode)
+        .collection('players')
+        .doc(playerId)
+        .delete();
+  }
+
+  Future<void> startGame(String roomCode) async {
+    await _roomsCollection.doc(roomCode).update({
+      'status': RoomStatus.playing.name,
+    });
+  }
+
+  Future<void> endGame(String roomCode) async {
+    await _roomsCollection.doc(roomCode).update({
+      'status': RoomStatus.finished.name,
+    });
+  }
+
+  Future<void> markPlayerAnswer(String roomCode, String playerId, bool isCorrect) async {
+    await _roomsCollection
+        .doc(roomCode)
+        .collection('players')
+        .doc(playerId)
+        .update({
+      'isCorrect': isCorrect,
+    });
+  }
+
+  Future<void> submitPlayerAnswer(String roomCode, String playerId, String answer) async {
+    await _roomsCollection
+        .doc(roomCode)
+        .collection('players')
+        .doc(playerId)
+        .update({
+      'answer': answer,
+      'answeredAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteRoom(String roomCode) async {
+    final playersSnapshot = await _roomsCollection
+        .doc(roomCode)
+        .collection('players')
+        .get();
+
+    final batch = _firestore.batch();
+    for (final doc in playersSnapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    batch.delete(_roomsCollection.doc(roomCode));
+    await batch.commit();
+
+    // Delete image from storage if exists
+    try {
+      await _storage.ref().child('rooms/$roomCode/question_image.jpg').delete();
+    } catch (_) {}
+  }
+
+  // Chat methods
+  Stream<List<ChatMessage>> chatStream(String roomCode) {
+    return _roomsCollection
+        .doc(roomCode)
+        .collection('chat')
+        .orderBy('sentAt', descending: false)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => ChatMessage.fromFirestore(doc)).toList());
+  }
+
+  Future<void> sendMessage({
+    required String roomCode,
+    required String playerId,
+    required String playerName,
+    required String text,
+    required MessageType type,
+  }) async {
+    final message = ChatMessage(
+      id: '',
+      playerId: playerId,
+      playerName: playerName,
+      text: text,
+      type: type,
+      sentAt: DateTime.now(),
+    );
+
+    await _roomsCollection
+        .doc(roomCode)
+        .collection('chat')
+        .add(message.toFirestore());
+  }
+
+  Future<void> markMessageAnswer({
+    required String roomCode,
+    required String messageId,
+    required bool isCorrect,
+  }) async {
+    await _roomsCollection
+        .doc(roomCode)
+        .collection('chat')
+        .doc(messageId)
+        .update({'isCorrect': isCorrect});
+  }
+
+  /// Get all rooms created by a user (as host)
+  Stream<List<RoomModel>> userHostedRoomsStream(String userId) {
+    return _roomsCollection
+        .where('hostId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => RoomModel.fromFirestore(doc, []))
+            .toList());
+  }
+
+  /// Get all rooms where user is a player
+  Stream<List<RoomModel>> userJoinedRoomsStream(String userId) {
+    // Query collection group on 'id' field (stored in player document)
+    return _firestore
+        .collectionGroup('players')
+        .where('id', isEqualTo: userId)
+        .snapshots()
+        .asyncMap((snapshot) async {
+      final rooms = <RoomModel>[];
+      for (final playerDoc in snapshot.docs) {
+        // Get parent room code from path: rooms/{roomCode}/players/{playerId}
+        final roomCode = playerDoc.reference.parent.parent?.id;
+        if (roomCode != null) {
+          final roomDoc = await _roomsCollection.doc(roomCode).get();
+          if (roomDoc.exists) {
+            rooms.add(RoomModel.fromFirestore(roomDoc, []));
+          }
+        }
+      }
+      // Sort by createdAt descending
+      rooms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return rooms;
+    });
+  }
+}

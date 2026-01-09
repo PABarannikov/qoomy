@@ -1,0 +1,54 @@
+name: qoomy
+description: "Qoomy - Real-time multiplayer quiz game"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: ^3.8.1
+  firebase_auth: ^5.3.4
+  cloud_firestore: ^5.5.1
+  cloud_functions: ^5.1.6
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # Authentication
+  google_sign_in: ^6.2.2
+
+  # Utilities
+  uuid: ^4.5.1
+  intl: ^0.19.0
+
+  # UI
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  flutter_svg: ^2.0.10
+
+  # Image picker
+  image_picker: ^1.0.7
+
+  # Firebase Storage
+  firebase_storage: ^12.3.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/qoomylogo.svg

@@ -1,0 +1,145 @@
+import 'dart:typed_data';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qoomy/services/room_service.dart';
+import 'package:qoomy/models/room_model.dart';
+import 'package:qoomy/models/chat_message_model.dart';
+
+final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
+
+final roomProvider = StreamProvider.family<RoomModel?, String>((ref, roomCode) {
+  return ref.watch(roomServiceProvider).roomStream(roomCode);
+});
+
+final playersProvider = StreamProvider.family<List<Player>, String>((ref, roomCode) {
+  return ref.watch(roomServiceProvider).playersStream(roomCode);
+});
+
+final chatProvider = StreamProvider.family<List<ChatMessage>, String>((ref, roomCode) {
+  return ref.watch(roomServiceProvider).chatStream(roomCode);
+});
+
+/// Provider for rooms hosted by a user
+final userHostedRoomsProvider = StreamProvider.family<List<RoomModel>, String>((ref, userId) {
+  return ref.watch(roomServiceProvider).userHostedRoomsStream(userId);
+});
+
+/// Provider for rooms joined by a user (as player)
+final userJoinedRoomsProvider = StreamProvider.family<List<RoomModel>, String>((ref, userId) {
+  return ref.watch(roomServiceProvider).userJoinedRoomsStream(userId);
+});
+
+class RoomNotifier extends StateNotifier<AsyncValue<String?>> {
+  final RoomService _roomService;
+
+  RoomNotifier(this._roomService) : super(const AsyncValue.data(null));
+
+  Future<String?> createRoom({
+    required String hostId,
+    required String hostName,
+    required EvaluationMode evaluationMode,
+    required String question,
+    required String answer,
+    String? comment,
+    Uint8List? imageBytes,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final roomCode = await _roomService.createRoom(
+        hostId: hostId,
+        hostName: hostName,
+        evaluationMode: evaluationMode,
+        question: question,
+        answer: answer,
+        comment: comment,
+        imageBytes: imageBytes,
+      );
+      state = AsyncValue.data(roomCode);
+      return roomCode;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return null;
+    }
+  }
+
+  Future<bool> joinRoom({
+    required String roomCode,
+    required String playerId,
+    required String playerName,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final success = await _roomService.joinRoom(
+        roomCode: roomCode.toUpperCase(),
+        playerId: playerId,
+        playerName: playerName,
+      );
+      if (success) {
+        state = AsyncValue.data(roomCode.toUpperCase());
+      } else {
+        state = AsyncValue.error('Failed to join room', StackTrace.current);
+      }
+      return success;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+
+  Future<void> leaveRoom(String roomCode, String playerId) async {
+    await _roomService.leaveRoom(roomCode, playerId);
+    state = const AsyncValue.data(null);
+  }
+
+  Future<void> startGame(String roomCode) async {
+    await _roomService.startGame(roomCode);
+  }
+
+  Future<void> endGame(String roomCode) async {
+    await _roomService.endGame(roomCode);
+  }
+
+  Future<void> markPlayerAnswer(String roomCode, String playerId, bool isCorrect) async {
+    await _roomService.markPlayerAnswer(roomCode, playerId, isCorrect);
+  }
+
+  Future<void> submitPlayerAnswer(String roomCode, String playerId, String answer) async {
+    await _roomService.submitPlayerAnswer(roomCode, playerId, answer);
+  }
+
+  Future<void> sendMessage({
+    required String roomCode,
+    required String playerId,
+    required String playerName,
+    required String text,
+    required MessageType type,
+  }) async {
+    await _roomService.sendMessage(
+      roomCode: roomCode,
+      playerId: playerId,
+      playerName: playerName,
+      text: text,
+      type: type,
+    );
+  }
+
+  Future<void> markMessageAnswer({
+    required String roomCode,
+    required String messageId,
+    required bool isCorrect,
+  }) async {
+    await _roomService.markMessageAnswer(
+      roomCode: roomCode,
+      messageId: messageId,
+      isCorrect: isCorrect,
+    );
+  }
+
+  void reset() {
+    state = const AsyncValue.data(null);
+  }
+}
+
+final roomNotifierProvider =
+    StateNotifierProvider<RoomNotifier, AsyncValue<String?>>((ref) {
+  return RoomNotifier(ref.watch(roomServiceProvider));
+});

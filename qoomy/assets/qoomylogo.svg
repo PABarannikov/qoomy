@@ -1,0 +1,36 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Q Outer Shape -->
+  <circle cx="100" cy="90" r="70"
+          fill="none"
+          stroke="#6C63FF"
+          stroke-width="10"/>
+
+  <!-- Q Tail (door) -->
+  <line x1="135" y1="125" x2="170" y2="160"
+        stroke="#6C63FF"
+        stroke-width="10"
+        stroke-linecap="round"/>
+
+  <!-- === TOP ROW (2 PEOPLE) === -->
+  <circle cx="80" cy="52" r="6" fill="#6C63FF"/>
+  <circle cx="120" cy="52" r="6" fill="#6C63FF"/>
+
+  <rect x="74" y="58" width="12" height="16" rx="5" fill="#6C63FF"/>
+  <rect x="114" y="58" width="12" height="16" rx="5" fill="#6C63FF"/>
+
+  <!-- === MIDDLE ROW (3 PEOPLE) === -->
+  <circle cx="65" cy="86" r="6" fill="#6C63FF"/>
+  <circle cx="100" cy="86" r="6" fill="#6C63FF"/>
+  <circle cx="135" cy="86" r="6" fill="#6C63FF"/>
+
+  <rect x="59" y="92" width="12" height="16" rx="5" fill="#6C63FF"/>
+  <rect x="94" y="92" width="12" height="16" rx="5" fill="#6C63FF"/>
+  <rect x="129" y="92" width="12" height="16" rx="5" fill="#6C63FF"/>
+
+  <!-- === BOTTOM ROW (1 PERSON) === -->
+  <circle cx="100" cy="122" r="6" fill="#6C63FF"/>
+
+  <rect x="94" y="128" width="12" height="16" rx="5" fill="#6C63FF"/>
+
+</svg>
