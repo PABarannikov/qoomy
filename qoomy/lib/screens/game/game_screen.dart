@@ -297,76 +297,81 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Check if question is long (more than ~50 characters typically means 2+ lines)
     final isLongQuestion = room.question.length > 80;
 
-    return GestureDetector(
-      onTap: isLongQuestion ? () => setState(() => _questionExpanded = !_questionExpanded) : null,
-      child: Card(
-        color: QoomyTheme.primaryColor,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.quiz, color: Colors.white70, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.question,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  const Spacer(),
-                  if (isLongQuestion)
-                    Icon(
+    return Card(
+      color: QoomyTheme.primaryColor,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.quiz, color: Colors.white70, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.question,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                const Spacer(),
+                if (isLongQuestion)
+                  IconButton(
+                    onPressed: () => setState(() => _questionExpanded = !_questionExpanded),
+                    icon: Icon(
                       _questionExpanded ? Icons.expand_less : Icons.expand_more,
-                      color: Colors.white70,
-                      size: 20,
+                      color: Colors.white,
                     ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              AnimatedCrossFade(
-                firstChild: Text(
-                  room.question,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                secondChild: Text(
-                  room.question,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                crossFadeState: _questionExpanded || !isLongQuestion
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                duration: const Duration(milliseconds: 200),
-              ),
-              if (room.imageUrl != null && (_questionExpanded || !isLongQuestion)) ...[
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    room.imageUrl!,
-                    height: 100,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 100,
-                      color: Colors.white24,
-                      child: const Icon(Icons.broken_image, color: Colors.white54),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white24,
+                      padding: const EdgeInsets.all(4),
+                      minimumSize: const Size(32, 32),
                     ),
+                    tooltip: _questionExpanded ? l10n.hide : l10n.show,
                   ),
-                ),
               ],
+            ),
+            const SizedBox(height: 8),
+            AnimatedCrossFade(
+              firstChild: Text(
+                room.question,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              secondChild: Text(
+                room.question,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              crossFadeState: _questionExpanded || !isLongQuestion
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 200),
+            ),
+            if (room.imageUrl != null && (_questionExpanded || !isLongQuestion)) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  room.imageUrl!,
+                  height: 100,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 100,
+                    color: Colors.white24,
+                    child: const Icon(Icons.broken_image, color: Colors.white54),
+                  ),
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
