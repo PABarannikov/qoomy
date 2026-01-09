@@ -3,14 +3,57 @@
 ## Project Info
 - **Firebase Project**: qoomy-quiz-game
 - **Live URL**: https://qoomy-quiz-game.web.app
+- **GitHub Repository**: https://github.com/PABarannikov/qoomy
 - **Custom Domain**: qoomy.online (pending DNS verification)
 
-## Prerequisites
+## Recommended Deployment Method: GitHub CI/CD
+
+**Always use GitHub CI/CD for deployment.** Simply push to the `master` branch and the deployment happens automatically.
+
+### How to Deploy
+
+1. Make your changes locally
+2. Commit and push to master:
+```bash
+git add .
+git commit -m "Your commit message"
+git push origin master
+```
+3. GitHub Actions will automatically:
+   - Check out the code
+   - Set up Flutter 3.27.0
+   - Install dependencies
+   - Run code analysis
+   - Build the web app
+   - Deploy to Firebase Hosting
+
+### Monitor Deployment
+
+- View workflow runs: https://github.com/PABarannikov/qoomy/actions
+- Check deployment status in GitHub Actions tab
+- Live site updates within minutes of push
+
+### Workflow Configuration
+
+The CI/CD workflow is defined in `.github/workflows/deploy.yml`:
+- Triggers on push to `master` branch
+- Also runs on pull requests (build only, no deploy)
+- Uses `FIREBASE_SERVICE_ACCOUNT` secret for deployment
+
+### Required GitHub Secrets
+
+- `FIREBASE_SERVICE_ACCOUNT`: Firebase service account JSON (already configured)
+
+---
+
+## Alternative: Manual Deployment (Not Recommended)
+
+Only use manual deployment if GitHub CI/CD is unavailable.
+
+### Prerequisites
 - Flutter SDK installed at `C:/flutter/flutter`
 - Firebase CLI installed and logged in
 - Node.js for Cloud Functions
-
-## Build & Deploy Commands
 
 ### Full Deployment (Frontend + Functions)
 ```bash
@@ -31,6 +74,8 @@ firebase deploy --only hosting
 cd C:/Qoomy/qoomy
 firebase deploy --only functions
 ```
+
+---
 
 ## Environment Configuration
 
@@ -113,3 +158,9 @@ firebase deploy --only functions
 ```bash
 firebase functions:log
 ```
+
+### GitHub Actions Failing
+
+1. Check workflow logs: https://github.com/PABarannikov/qoomy/actions
+2. Verify `FIREBASE_SERVICE_ACCOUNT` secret is set correctly
+3. Ensure Flutter version in workflow matches project requirements
