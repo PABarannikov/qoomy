@@ -110,7 +110,7 @@ class TeamDetailsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
 
-          // Invite code section
+          // Invite link section
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -141,18 +141,19 @@ class TeamDetailsScreen extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            team.inviteCode,
+                            'qoomy.online/join-team/${team.inviteCode}',
                             style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.copy),
                           onPressed: () {
-                            Clipboard.setData(ClipboardData(text: team.inviteCode));
+                            final inviteUrl = 'https://qoomy.online/join-team/${team.inviteCode}';
+                            Clipboard.setData(ClipboardData(text: inviteUrl));
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text(l10n.inviteCodeCopied)),
                             );
