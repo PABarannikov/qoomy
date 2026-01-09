@@ -430,12 +430,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       itemBuilder: (context, index) {
         final message = messages[index];
         final isMe = isHost ? message.playerId == hostId : message.playerId == currentUserId;
-        return _buildMessageBubble(message, isMe: isMe, isAiMode: isAiMode, isHost: isHost);
+        return _buildMessageBubble(message, isMe: isMe, isAiMode: isAiMode, isHost: isHost, l10n: l10n);
       },
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message, {bool isMe = false, bool isAiMode = false, bool isHost = false}) {
+  Widget _buildMessageBubble(ChatMessage message, {bool isMe = false, bool isAiMode = false, bool isHost = false, required AppLocalizations l10n}) {
     final isAnswer = message.type == MessageType.answer;
     final isMarked = message.isCorrect != null;
 
