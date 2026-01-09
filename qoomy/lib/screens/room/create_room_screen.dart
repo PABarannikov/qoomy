@@ -25,7 +25,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   final _answerController = TextEditingController();
   final _commentController = TextEditingController();
 
-  EvaluationMode _selectedMode = EvaluationMode.manual;
+  EvaluationMode _selectedMode = EvaluationMode.ai;
   bool _isCreating = false;
   Uint8List? _selectedImage;
   String? _selectedImageName;
