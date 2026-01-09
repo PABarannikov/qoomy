@@ -188,108 +188,105 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ),
           ),
 
-          // Right side: End game (host) OR Language + Profile (player)
-          if (isHost)
-            TextButton(
-              onPressed: () => _endGame(),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.stop, color: Colors.red, size: 18),
-                  const SizedBox(width: 4),
-                  Text(l10n.endGame, style: const TextStyle(color: Colors.red, fontSize: 12)),
-                ],
-              ),
-            )
-          else
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Language toggle
-                IconButton(
-                  icon: Text(
-                    ref.watch(localeProvider).languageCode.toUpperCase(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+          // Right side: Language + Profile (for both host and player)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Language toggle
+              IconButton(
+                icon: Text(
+                  ref.watch(localeProvider).languageCode.toUpperCase(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
-                  onPressed: () {
-                    ref.read(localeProvider.notifier).toggleLocale();
-                  },
-                  tooltip: l10n.language,
                 ),
-                // Profile button
-                if (currentUser != null)
-                  PopupMenuButton<String>(
-                    icon: CircleAvatar(
-                      radius: 14,
-                      backgroundColor: QoomyTheme.primaryColor.withOpacity(0.1),
-                      backgroundImage: currentUser.avatarUrl != null
-                          ? NetworkImage(currentUser.avatarUrl!)
-                          : null,
-                      child: currentUser.avatarUrl == null
-                          ? Text(
-                              currentUser.displayName.isNotEmpty
-                                  ? currentUser.displayName[0].toUpperCase()
-                                  : '?',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: QoomyTheme.primaryColor,
-                              ),
-                            )
-                          : null,
-                    ),
-                    onSelected: (value) async {
-                      if (value == 'logout') {
-                        await ref.read(authNotifierProvider.notifier).signOut();
-                        if (context.mounted) {
-                          context.go('/login');
-                        }
+                onPressed: () {
+                  ref.read(localeProvider.notifier).toggleLocale();
+                },
+                tooltip: l10n.language,
+              ),
+              // Profile button
+              if (currentUser != null)
+                PopupMenuButton<String>(
+                  icon: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: QoomyTheme.primaryColor.withOpacity(0.1),
+                    backgroundImage: currentUser.avatarUrl != null
+                        ? NetworkImage(currentUser.avatarUrl!)
+                        : null,
+                    child: currentUser.avatarUrl == null
+                        ? Text(
+                            currentUser.displayName.isNotEmpty
+                                ? currentUser.displayName[0].toUpperCase()
+                                : '?',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: QoomyTheme.primaryColor,
+                            ),
+                          )
+                        : null,
+                  ),
+                  onSelected: (value) async {
+                    if (value == 'logout') {
+                      await ref.read(authNotifierProvider.notifier).signOut();
+                      if (context.mounted) {
+                        context.go('/login');
                       }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        enabled: false,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              currentUser.displayName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
+                    } else if (value == 'end_game' && isHost) {
+                      _endGame();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      enabled: false,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            currentUser.displayName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
-                            Text(
-                              '${l10n.games}: ${currentUser.gamesPlayed} | ${l10n.wins}: ${currentUser.gamesWon}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
+                          ),
+                          Text(
+                            '${l10n.games}: ${currentUser.gamesPlayed} | ${l10n.wins}: ${currentUser.gamesWon}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      const PopupMenuDivider(),
+                    ),
+                    const PopupMenuDivider(),
+                    if (isHost)
                       PopupMenuItem(
-                        value: 'logout',
+                        value: 'end_game',
                         child: Row(
                           children: [
-                            const Icon(Icons.logout, size: 20),
+                            const Icon(Icons.stop, size: 20, color: Colors.red),
                             const SizedBox(width: 8),
-                            Text(l10n.logout),
+                            Text(l10n.endGame, style: const TextStyle(color: Colors.red)),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-              ],
-            ),
+                    PopupMenuItem(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.logout, size: 20),
+                          const SizedBox(width: 8),
+                          Text(l10n.logout),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ],
       ),
     );
