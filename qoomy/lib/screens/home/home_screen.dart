@@ -194,7 +194,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(width: 12),
           // Status filter
           _buildIconFilterChip(
-            icon: Icons.play_circle,
+            icon: Icons.bolt,
             tooltip: l10n.active,
             isSelected: _statusFilter == StatusFilter.active,
             onTap: () => setState(() => _statusFilter = _statusFilter == StatusFilter.active ? StatusFilter.all : StatusFilter.active),
@@ -204,7 +204,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(width: 12),
           // Unread filter
           _buildIconFilterChip(
-            icon: Icons.mark_chat_unread,
+            icon: Icons.markunread,
             tooltip: l10n.unread,
             isSelected: _unreadFilter == UnreadFilter.unread,
             onTap: () => setState(() => _unreadFilter = _unreadFilter == UnreadFilter.unread ? UnreadFilter.all : UnreadFilter.unread),
