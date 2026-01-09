@@ -16,34 +16,95 @@ class TeamsListScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.myTeams),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: QoomyTheme.maxContentWidth),
-          child: currentUser.when(
-            data: (user) {
-              if (user == null) {
-                return Center(child: Text(l10n.pleaseLogin));
-              }
-              return _buildTeamsList(context, ref, user.id);
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: QoomyTheme.maxContentWidth),
+            child: Column(
+              children: [
+                // Header with back, title, language, profile
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      // Back button
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => context.pop(),
+                      ),
+                      const Spacer(),
+                      // Title
+                      Text(
+                        l10n.myTeams,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      // Language toggle
+                      IconButton(
+                        icon: Text(
+                          ref.watch(localeProvider).languageCode.toUpperCase(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        onPressed: () {
+                          final currentLocale = ref.read(localeProvider);
+                          final newLocale = currentLocale.languageCode == 'en'
+                              ? const Locale('ru')
+                              : const Locale('en');
+                          ref.read(localeProvider.notifier).state = newLocale;
+                        },
+                      ),
+                      // Profile/Logout button
+                      IconButton(
+                        icon: const Icon(Icons.logout),
+                        onPressed: () => ref.read(authProvider.notifier).signOut(),
+                        tooltip: l10n.logout,
+                      ),
+                    ],
+                  ),
+                ),
+                // Teams list
+                Expanded(
+                  child: currentUser.when(
+                    data: (user) {
+                      if (user == null) {
+                        return Center(child: Text(l10n.pleaseLogin));
+                      }
+                      return _buildTeamsList(context, ref, user.id);
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(child: Text('Error: $e')),
+                  ),
+                ),
+                // Create Team button at bottom
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => context.push('/teams/create'),
+                      icon: const Icon(Icons.add),
+                      label: Text(l10n.createTeam),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: QoomyTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/teams/create'),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.createTeam),
-        backgroundColor: QoomyTheme.primaryColor,
-        foregroundColor: Colors.white,
       ),
     );
   }
@@ -63,12 +124,12 @@ class TeamsListScreen extends ConsumerWidget {
             ref.invalidate(userTeamsProvider(userId));
           },
           child: ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: teams.length + 1,
             itemBuilder: (context, index) {
               if (index == teams.length) {
                 return Padding(
-                  padding: const EdgeInsets.only(top: 8, bottom: 80),
+                  padding: const EdgeInsets.only(top: 8, bottom: 16),
                   child: OutlinedButton.icon(
                     onPressed: () => context.push('/join-team'),
                     icon: const Icon(Icons.link),
