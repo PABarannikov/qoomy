@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qoomy/providers/auth_provider.dart';
 import 'package:qoomy/providers/room_provider.dart';
-import 'package:qoomy/providers/locale_provider.dart';
 import 'package:qoomy/models/room_model.dart';
 import 'package:qoomy/models/chat_message_model.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
+import 'package:qoomy/widgets/app_header.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
   final String roomCode;
@@ -120,8 +120,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   ) {
     return Column(
       children: [
-        // Header with back button, access code, and end game (host) or language/profile (player)
-        _buildHeader(context, room, l10n, isHost, currentUser),
+        // Header with back button, access code, and profile menu
+        _buildHeader(context, room, l10n, isHost),
 
         // Question card (and answer for host) - takes only needed space
         Padding(
@@ -162,149 +162,53 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, RoomModel room, AppLocalizations l10n, bool isHost, dynamic currentUser) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Row(
+  Widget _buildHeader(BuildContext context, RoomModel room, AppLocalizations l10n, bool isHost) {
+    return AppHeader(
+      titleWidget: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Back button
-          IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/'),
-            tooltip: l10n.backToHome,
+          Text(
+            '${l10n.accessCode}: ',
+            style: const TextStyle(fontSize: 14),
           ),
-
-          // Room code (centered)
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${l10n.accessCode}: ',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                Text(
-                  widget.roomCode,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2),
-                ),
-                const SizedBox(width: 4),
-                GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: widget.roomCode));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.get('codeCopied')),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  child: const Icon(Icons.copy, size: 16),
-                ),
-              ],
-            ),
+          Text(
+            widget.roomCode,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2),
           ),
-
-          // Right side: Language + Profile (for both host and player)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Language toggle
-              IconButton(
-                icon: Text(
-                  ref.watch(localeProvider).languageCode.toUpperCase(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: widget.roomCode));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l10n.get('codeCopied')),
+                  duration: const Duration(seconds: 2),
                 ),
-                onPressed: () {
-                  ref.read(localeProvider.notifier).toggleLocale();
-                },
-                tooltip: l10n.language,
-              ),
-              // Profile button
-              if (currentUser != null)
-                PopupMenuButton<String>(
-                  icon: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: QoomyTheme.primaryColor.withOpacity(0.1),
-                    backgroundImage: currentUser.avatarUrl != null
-                        ? NetworkImage(currentUser.avatarUrl!)
-                        : null,
-                    child: currentUser.avatarUrl == null
-                        ? Text(
-                            currentUser.displayName.isNotEmpty
-                                ? currentUser.displayName[0].toUpperCase()
-                                : '?',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: QoomyTheme.primaryColor,
-                            ),
-                          )
-                        : null,
-                  ),
-                  onSelected: (value) async {
-                    if (value == 'logout') {
-                      await ref.read(authNotifierProvider.notifier).signOut();
-                      if (context.mounted) {
-                        context.go('/login');
-                      }
-                    } else if (value == 'end_game' && isHost) {
-                      _endGame();
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      enabled: false,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            currentUser.displayName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                          Text(
-                            '${l10n.games}: ${currentUser.gamesPlayed} | ${l10n.wins}: ${currentUser.gamesWon}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuDivider(),
-                    if (isHost)
-                      PopupMenuItem(
-                        value: 'end_game',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.stop, size: 20, color: Colors.red),
-                            const SizedBox(width: 8),
-                            Text(l10n.endGame, style: const TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    PopupMenuItem(
-                      value: 'logout',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.logout, size: 20),
-                          const SizedBox(width: 8),
-                          Text(l10n.logout),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-            ],
+              );
+            },
+            child: const Icon(Icons.copy, size: 16),
           ),
         ],
       ),
+      extraMenuItems: isHost
+          ? [
+              PopupMenuItem(
+                value: 'end_game',
+                child: Row(
+                  children: [
+                    const Icon(Icons.stop, size: 20, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text(l10n.endGame, style: const TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ]
+          : null,
+      onMenuItemSelected: (value) {
+        if (value == 'end_game' && isHost) {
+          _endGame();
+        }
+      },
     );
   }
 

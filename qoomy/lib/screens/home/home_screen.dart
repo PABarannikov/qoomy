@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qoomy/providers/auth_provider.dart';
 import 'package:qoomy/providers/room_provider.dart';
-import 'package:qoomy/providers/locale_provider.dart';
 import 'package:qoomy/models/room_model.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
+import 'package:qoomy/widgets/app_header.dart';
 
 enum RoleFilter { all, host, player }
 enum StatusFilter { all, active }
@@ -36,114 +36,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             constraints: const BoxConstraints(maxWidth: QoomyTheme.maxContentWidth),
             child: Column(
               children: [
-                // Custom header within constrained width
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 8),
-                      Text(
-                        'Qoomy',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: QoomyTheme.primaryColor,
-                        ),
-                      ),
-                      const Spacer(),
-                      // Teams button
-                      IconButton(
-                        icon: const Icon(Icons.group),
-                        onPressed: () => context.push('/teams'),
-                        tooltip: l10n.teams,
-                      ),
-                      // Language toggle
-                      IconButton(
-                        icon: Text(
-                          ref.watch(localeProvider).languageCode.toUpperCase(),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        onPressed: () {
-                          ref.read(localeProvider.notifier).toggleLocale();
-                        },
-                        tooltip: l10n.language,
-                      ),
-                      // Profile button
-                      currentUser.when(
-                        data: (user) => user != null
-                            ? PopupMenuButton<String>(
-                                icon: CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: QoomyTheme.primaryColor.withOpacity(0.1),
-                                  backgroundImage: user.avatarUrl != null
-                                      ? NetworkImage(user.avatarUrl!)
-                                      : null,
-                                  child: user.avatarUrl == null
-                                      ? Text(
-                                          user.displayName.isNotEmpty
-                                              ? user.displayName[0].toUpperCase()
-                                              : '?',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: QoomyTheme.primaryColor,
-                                          ),
-                                        )
-                                      : null,
-                                ),
-                                onSelected: (value) async {
-                                  if (value == 'logout') {
-                                    await ref.read(authNotifierProvider.notifier).signOut();
-                                    if (context.mounted) {
-                                      context.go('/login');
-                                    }
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  PopupMenuItem(
-                                    enabled: false,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          user.displayName,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                        Text(
-                                          '${l10n.games}: ${user.gamesPlayed} | ${l10n.wins}: ${user.gamesWon}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const PopupMenuDivider(),
-                                  PopupMenuItem(
-                                    value: 'logout',
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.logout, size: 20),
-                                        const SizedBox(width: 8),
-                                        Text(l10n.logout),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : const SizedBox(),
-                        loading: () => const SizedBox(),
-                        error: (_, __) => const SizedBox(),
-                      ),
-                    ],
+                // Shared header with Qoomy title
+                AppHeader(
+                  showBackButton: false,
+                  titleWidget: Text(
+                    'Qoomy',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: QoomyTheme.primaryColor,
+                    ),
                   ),
+                  showTeamsButton: true,
                 ),
                 // Filters
                 _buildFilters(l10n),

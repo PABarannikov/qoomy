@@ -8,6 +8,7 @@ import 'package:qoomy/models/team_model.dart';
 import 'package:qoomy/models/user_model.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
+import 'package:qoomy/widgets/app_header.dart';
 
 class TeamDetailsScreen extends ConsumerWidget {
   final String teamId;
@@ -21,26 +22,33 @@ class TeamDetailsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.teams),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/teams'),
-        ),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: QoomyTheme.maxContentWidth),
-          child: teamAsync.when(
-            data: (team) {
-              if (team == null) {
-                return Center(child: Text(l10n.teamNotFound));
-              }
-              final userId = currentUser.valueOrNull?.id ?? '';
-              return _buildTeamDetails(context, ref, team, userId, l10n);
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: QoomyTheme.maxContentWidth),
+            child: Column(
+              children: [
+                // Shared header
+                AppHeader(
+                  title: l10n.teams,
+                  backRoute: '/teams',
+                ),
+                // Team details content
+                Expanded(
+                  child: teamAsync.when(
+                    data: (team) {
+                      if (team == null) {
+                        return Center(child: Text(l10n.teamNotFound));
+                      }
+                      final userId = currentUser.valueOrNull?.id ?? '';
+                      return _buildTeamDetails(context, ref, team, userId, l10n);
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(child: Text('Error: $e')),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
