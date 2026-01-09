@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qoomy/providers/auth_provider.dart';
-import 'package:qoomy/providers/locale_provider.dart';
 import 'package:qoomy/providers/team_provider.dart';
 import 'package:qoomy/models/team_model.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
+import 'package:qoomy/widgets/app_header.dart';
 
 class TeamsListScreen extends ConsumerWidget {
   const TeamsListScreen({super.key});
@@ -23,52 +23,8 @@ class TeamsListScreen extends ConsumerWidget {
             constraints: const BoxConstraints(maxWidth: QoomyTheme.maxContentWidth),
             child: Column(
               children: [
-                // Header with back, title, language, profile
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      // Back button
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () => context.go('/'),
-                      ),
-                      const Spacer(),
-                      // Title
-                      Text(
-                        l10n.myTeams,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      // Language toggle
-                      IconButton(
-                        icon: Text(
-                          ref.watch(localeProvider).languageCode.toUpperCase(),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        onPressed: () {
-                          final currentLocale = ref.read(localeProvider);
-                          final newLocale = currentLocale.languageCode == 'en'
-                              ? const Locale('ru')
-                              : const Locale('en');
-                          ref.read(localeProvider.notifier).state = newLocale;
-                        },
-                      ),
-                      // Profile/Logout button
-                      IconButton(
-                        icon: const Icon(Icons.logout),
-                        onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
-                        tooltip: l10n.logout,
-                      ),
-                    ],
-                  ),
-                ),
+                // Shared header
+                AppHeader(title: l10n.myTeams),
                 // Teams list
                 Expanded(
                   child: currentUser.when(
