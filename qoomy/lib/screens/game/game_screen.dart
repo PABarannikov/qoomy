@@ -21,17 +21,34 @@ class GameScreen extends ConsumerStatefulWidget {
 
 class _GameScreenState extends ConsumerState<GameScreen> {
   bool _showAnswer = false;
-  bool _questionExpanded = false;
+  bool _questionCollapsed = false; // Collapsed when user scrolls down
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
   bool _isSending = false;
   MessageType _selectedType = MessageType.answer;
 
   @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _messageController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+
+    // Collapse question when user scrolls down more than 50 pixels
+    final shouldCollapse = _scrollController.offset > 50;
+    if (shouldCollapse != _questionCollapsed) {
+      setState(() => _questionCollapsed = shouldCollapse);
+    }
   }
 
   void _scrollToBottom() {
@@ -294,8 +311,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Widget _buildQuestionCard(RoomModel room, bool isHost, AppLocalizations l10n) {
-    // Check if question is long (more than ~50 characters typically means 2+ lines)
+    // Check if question is long (more than ~80 characters typically means 2+ lines)
     final isLongQuestion = room.question.length > 80;
+    // Show full question by default, collapse only when scrolled down and question is long
+    final showCollapsed = _questionCollapsed && isLongQuestion;
 
     return Card(
       color: QoomyTheme.primaryColor,
@@ -315,9 +334,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 const Spacer(),
                 if (isLongQuestion)
                   IconButton(
-                    onPressed: () => setState(() => _questionExpanded = !_questionExpanded),
+                    onPressed: () => setState(() => _questionCollapsed = !_questionCollapsed),
                     icon: Icon(
-                      _questionExpanded ? Icons.expand_less : Icons.expand_more,
+                      showCollapsed ? Icons.expand_more : Icons.expand_less,
                       color: Colors.white,
                     ),
                     style: IconButton.styleFrom(
@@ -325,7 +344,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       padding: const EdgeInsets.all(4),
                       minimumSize: const Size(32, 32),
                     ),
-                    tooltip: _questionExpanded ? l10n.hide : l10n.show,
+                    tooltip: showCollapsed ? l10n.show : l10n.hide,
                   ),
               ],
             ),
@@ -349,12 +368,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              crossFadeState: _questionExpanded || !isLongQuestion
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
+              crossFadeState: showCollapsed
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
               duration: const Duration(milliseconds: 200),
             ),
-            if (room.imageUrl != null && (_questionExpanded || !isLongQuestion)) ...[
+            if (room.imageUrl != null && !showCollapsed) ...[
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
