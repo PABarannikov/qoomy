@@ -311,10 +311,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Widget _buildQuestionCard(RoomModel room, bool isHost, AppLocalizations l10n) {
-    // Check if question is long (more than ~80 characters typically means 2+ lines)
+    // Check if question is long or has an image (both make the card collapsible)
+    final hasImage = room.imageUrl != null && room.imageUrl!.isNotEmpty;
     final isLongQuestion = room.question.length > 80;
-    // Show full question by default, collapse only when scrolled down and question is long
-    final showCollapsed = _questionCollapsed && isLongQuestion;
+    final isCollapsible = isLongQuestion || hasImage;
+    // Show full question by default, collapse only when scrolled down and content is collapsible
+    final showCollapsed = _questionCollapsed && isCollapsible;
 
     return Card(
       color: QoomyTheme.primaryColor,
@@ -332,7 +334,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 const Spacer(),
-                if (isLongQuestion)
+                if (isCollapsible)
                   IconButton(
                     onPressed: () => setState(() => _questionCollapsed = !_questionCollapsed),
                     icon: Icon(
