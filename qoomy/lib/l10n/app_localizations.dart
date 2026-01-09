@@ -127,6 +127,7 @@ class AppLocalizations {
       'markAsWrong': 'Mark as wrong',
       'show': 'Show',
       'hide': 'Hide',
+      'onlyHostCanSee': 'Only you can see this',
 
       // Results
       'gameResults': 'Game Results',
@@ -255,6 +256,7 @@ class AppLocalizations {
       'markAsWrong': 'Отметить как неправильный',
       'show': 'Показать',
       'hide': 'Скрыть',
+      'onlyHostCanSee': 'Ответ виден только ведущему',
 
       // Results
       'gameResults': 'Результаты',
@@ -369,6 +371,7 @@ class AppLocalizations {
   String get markAsWrong => get('markAsWrong');
   String get show => get('show');
   String get hide => get('hide');
+  String get onlyHostCanSee => get('onlyHostCanSee');
   String get gameResults => get('gameResults');
   String get winner => get('winner');
   String get noWinner => get('noWinner');
