@@ -373,20 +373,25 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   : CrossFadeState.showSecond,
               duration: const Duration(milliseconds: 200),
             ),
-            if (room.imageUrl != null && !showCollapsed) ...[
+            if (room.imageUrl != null && room.imageUrl!.isNotEmpty && !showCollapsed) ...[
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
                   room.imageUrl!,
-                  height: 100,
                   width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 100,
-                    color: Colors.white24,
-                    child: const Icon(Icons.broken_image, color: Colors.white54),
-                  ),
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 100,
+                      color: Colors.white24,
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.white70),
+                      ),
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ),
             ],

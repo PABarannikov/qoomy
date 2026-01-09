@@ -149,9 +149,8 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                             borderRadius: BorderRadius.circular(12),
                             child: Image.memory(
                               _selectedImage!,
-                              height: 200,
                               width: double.infinity,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                             ),
                           ),
                           Positioned(

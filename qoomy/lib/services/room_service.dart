@@ -21,7 +21,17 @@ class RoomService {
   Future<String?> _uploadImage(String roomCode, Uint8List imageBytes) async {
     try {
       final ref = _storage.ref().child('rooms/$roomCode/question_image.jpg');
-      await ref.putData(imageBytes, SettableMetadata(contentType: 'image/jpeg'));
+      final uploadTask = ref.putData(imageBytes, SettableMetadata(contentType: 'image/jpeg'));
+
+      // Add timeout to prevent hanging indefinitely
+      await uploadTask.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          uploadTask.cancel();
+          throw Exception('Image upload timed out');
+        },
+      );
+
       return await ref.getDownloadURL();
     } catch (e) {
       print('Error uploading image: $e');
