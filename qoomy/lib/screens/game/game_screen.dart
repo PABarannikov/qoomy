@@ -131,10 +131,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildQuestionCard(room, isHost, l10n),
-              if (isHost) ...[
-                const SizedBox(height: 12),
+              if (isHost)
                 _buildAnswerSection(room, l10n),
-              ],
             ],
           ),
         ),
@@ -397,49 +395,58 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Widget _buildAnswerSection(RoomModel room, AppLocalizations l10n) {
-    return Card(
-      color: QoomyTheme.successColor.withOpacity(0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.check_circle, color: QoomyTheme.successColor, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.correctAnswer,
-                  style: TextStyle(
-                    color: QoomyTheme.successColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+    // Hide when question is collapsed
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      child: _questionCollapsed
+          ? const SizedBox.shrink()
+          : Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Card(
+                color: QoomyTheme.successColor.withOpacity(0.1),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle, color: QoomyTheme.successColor, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            l10n.correctAnswer,
+                            style: TextStyle(
+                              color: QoomyTheme.successColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(Icons.visibility_off, color: Colors.grey.shade400, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            l10n.onlyHostCanSee,
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(room.answer, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      if (room.comment != null && room.comment!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          room.comment!,
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                const Spacer(),
-                Icon(Icons.visibility_off, color: Colors.grey.shade400, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  l10n.onlyHostCanSee,
-                  style: TextStyle(
-                    color: Colors.grey.shade500,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(room.answer, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-            if (room.comment != null && room.comment!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                room.comment!,
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
               ),
-            ],
-          ],
-        ),
-      ),
+            ),
     );
   }
 
