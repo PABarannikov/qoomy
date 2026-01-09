@@ -295,104 +295,54 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Widget _buildQuestionCard(RoomModel room, bool isHost, AppLocalizations l10n) {
-    // Host sees white card, player sees colored card
-    if (isHost) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.quiz, color: QoomyTheme.primaryColor, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.question,
-                    style: TextStyle(
-                      color: QoomyTheme.primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                room.question,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-              ),
-              if (room.imageUrl != null) ...[
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    room.imageUrl!,
-                    height: 120,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 120,
-                      color: Colors.grey.shade200,
-                      child: const Icon(Icons.broken_image),
-                    ),
-                  ),
+    // Same colored style for both host and player
+    return Card(
+      color: QoomyTheme.primaryColor,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.quiz, color: Colors.white70, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.question,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
-            ],
-          ),
-        ),
-      );
-    } else {
-      // Player sees colored question card
-      return Card(
-        color: QoomyTheme.primaryColor,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.quiz, color: Colors.white70, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.question,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              room.question,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 8),
-              Text(
-                room.question,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (room.imageUrl != null) ...[
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    room.imageUrl!,
+            ),
+            if (room.imageUrl != null) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  room.imageUrl!,
+                  height: 100,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
                     height: 100,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 100,
-                      color: Colors.white24,
-                      child: const Icon(Icons.broken_image, color: Colors.white54),
-                    ),
+                    color: Colors.white24,
+                    child: const Icon(Icons.broken_image, color: Colors.white54),
                   ),
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
-      );
-    }
+      ),
+    );
   }
 
   Widget _buildAnswerSection(RoomModel room) {
