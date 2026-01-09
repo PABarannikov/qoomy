@@ -141,6 +141,14 @@ class AppLocalizations {
       'language': 'Language',
       'english': 'English',
       'russian': 'Russian',
+
+      // Filters
+      'all': 'All',
+      'asHost': 'Host',
+      'asPlayer': 'Player',
+      'active': 'Active',
+      'unread': 'Unread',
+      'noMatchingQuestions': 'No matching questions',
     },
     'ru': {
       // App
@@ -270,6 +278,14 @@ class AppLocalizations {
       'language': 'Язык',
       'english': 'English',
       'russian': 'Русский',
+
+      // Filters
+      'all': 'Все',
+      'asHost': 'Ведущий',
+      'asPlayer': 'Игрок',
+      'active': 'Активные',
+      'unread': 'Непрочитанные',
+      'noMatchingQuestions': 'Нет подходящих вопросов',
     },
   };
 
@@ -381,6 +397,12 @@ class AppLocalizations {
   String get language => get('language');
   String get english => get('english');
   String get russian => get('russian');
+  String get all => get('all');
+  String get asHost => get('asHost');
+  String get asPlayer => get('asPlayer');
+  String get active => get('active');
+  String get unread => get('unread');
+  String get noMatchingQuestions => get('noMatchingQuestions');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

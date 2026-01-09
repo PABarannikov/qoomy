@@ -8,11 +8,24 @@ import 'package:qoomy/models/room_model.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
 
-class HomeScreen extends ConsumerWidget {
+enum RoleFilter { all, host, player }
+enum StatusFilter { all, active }
+enum UnreadFilter { all, unread }
+
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  RoleFilter _roleFilter = RoleFilter.all;
+  StatusFilter _statusFilter = StatusFilter.all;
+  UnreadFilter _unreadFilter = UnreadFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final l10n = AppLocalizations.of(context);
 
@@ -126,6 +139,8 @@ class HomeScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                // Filters
+                _buildFilters(l10n),
                 Expanded(
                   child: currentUser.when(
                     data: (user) {
@@ -148,9 +163,105 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildFilters(AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // Role filter
+            _buildFilterChip(
+              label: l10n.all,
+              isSelected: _roleFilter == RoleFilter.all,
+              onTap: () => setState(() => _roleFilter = RoleFilter.all),
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              label: l10n.asHost,
+              icon: Icons.star,
+              isSelected: _roleFilter == RoleFilter.host,
+              onTap: () => setState(() => _roleFilter = RoleFilter.host),
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              label: l10n.asPlayer,
+              icon: Icons.person,
+              isSelected: _roleFilter == RoleFilter.player,
+              onTap: () => setState(() => _roleFilter = RoleFilter.player),
+            ),
+            const SizedBox(width: 16),
+            Container(width: 1, height: 24, color: Colors.grey.shade300),
+            const SizedBox(width: 16),
+            // Status filter
+            _buildFilterChip(
+              label: l10n.active,
+              icon: Icons.play_circle,
+              isSelected: _statusFilter == StatusFilter.active,
+              onTap: () => setState(() => _statusFilter = _statusFilter == StatusFilter.active ? StatusFilter.all : StatusFilter.active),
+            ),
+            const SizedBox(width: 16),
+            Container(width: 1, height: 24, color: Colors.grey.shade300),
+            const SizedBox(width: 16),
+            // Unread filter
+            _buildFilterChip(
+              label: l10n.unread,
+              icon: Icons.mark_chat_unread,
+              isSelected: _unreadFilter == UnreadFilter.unread,
+              onTap: () => setState(() => _unreadFilter = _unreadFilter == UnreadFilter.unread ? UnreadFilter.all : UnreadFilter.unread),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    IconData? icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade300,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected ? Colors.white : Colors.grey.shade600,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? Colors.white : Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildRoomsList(BuildContext context, WidgetRef ref, String userId) {
     final hostedRoomsAsync = ref.watch(userHostedRoomsProvider(userId));
     final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider(userId));
+    final l10n = AppLocalizations.of(context);
 
     return hostedRoomsAsync.when(
       data: (hostedRooms) => joinedRoomsAsync.when(
@@ -161,16 +272,40 @@ class HomeScreen extends ConsumerWidget {
               .toList();
 
           // Combine all rooms and sort by creation time (newest first)
-          final allRooms = <MapEntry<RoomModel, bool>>[];
+          var allRooms = <MapEntry<RoomModel, bool>>[];
           for (final room in hostedRooms) {
             allRooms.add(MapEntry(room, true)); // isHost = true
           }
           for (final room in playerRooms) {
             allRooms.add(MapEntry(room, false)); // isHost = false
           }
+
+          // Apply role filter
+          if (_roleFilter == RoleFilter.host) {
+            allRooms = allRooms.where((e) => e.value).toList();
+          } else if (_roleFilter == RoleFilter.player) {
+            allRooms = allRooms.where((e) => !e.value).toList();
+          }
+
+          // Apply status filter
+          if (_statusFilter == StatusFilter.active) {
+            allRooms = allRooms.where((e) => e.key.status != RoomStatus.finished).toList();
+          }
+
+          // Apply unread filter (TODO: implement actual unread tracking)
+          // For now, unread filter shows rooms with status playing or waiting
+          if (_unreadFilter == UnreadFilter.unread) {
+            allRooms = allRooms.where((e) => e.key.status == RoomStatus.playing).toList();
+          }
+
           allRooms.sort((a, b) => b.key.createdAt.compareTo(a.key.createdAt));
 
           if (allRooms.isEmpty) {
+            // Check if we have rooms but they're filtered out
+            final hasAnyRooms = hostedRooms.isNotEmpty || playerRooms.isNotEmpty;
+            if (hasAnyRooms) {
+              return _buildNoMatchingState(context);
+            }
             return _buildEmptyState(context);
           }
 
@@ -198,39 +333,6 @@ class HomeScreen extends ConsumerWidget {
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, IconData icon, int count) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: QoomyTheme.primaryColor),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: QoomyTheme.primaryColor,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: QoomyTheme.primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: QoomyTheme.primaryColor,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -412,6 +514,34 @@ class HomeScreen extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoMatchingState(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.filter_list_off,
+              size: 80,
+              color: Colors.grey.shade300,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              l10n.noMatchingQuestions,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
               ),
             ),
           ],
