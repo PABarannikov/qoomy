@@ -112,7 +112,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildQuestionCard(room, isHost),
+              _buildQuestionCard(room, isHost, l10n),
               if (isHost) ...[
                 const SizedBox(height: 12),
                 _buildAnswerSection(room),
@@ -294,7 +294,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  Widget _buildQuestionCard(RoomModel room, bool isHost) {
+  Widget _buildQuestionCard(RoomModel room, bool isHost, AppLocalizations l10n) {
     // Host sees white card, player sees colored card
     if (isHost) {
       return Card(
@@ -308,7 +308,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   Icon(Icons.quiz, color: QoomyTheme.primaryColor, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    'Question',
+                    l10n.question,
                     style: TextStyle(
                       color: QoomyTheme.primaryColor,
                       fontWeight: FontWeight.bold,
@@ -352,13 +352,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.quiz, color: Colors.white70, size: 18),
-                  SizedBox(width: 8),
+                  const Icon(Icons.quiz, color: Colors.white70, size: 18),
+                  const SizedBox(width: 8),
                   Text(
-                    'Question',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                    l10n.question,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
