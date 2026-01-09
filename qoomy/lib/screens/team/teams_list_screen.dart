@@ -63,7 +63,7 @@ class TeamsListScreen extends ConsumerWidget {
                       // Profile/Logout button
                       IconButton(
                         icon: const Icon(Icons.logout),
-                        onPressed: () => ref.read(authProvider.notifier).signOut(),
+                        onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
                         tooltip: l10n.logout,
                       ),
                     ],
