@@ -680,12 +680,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               enabled: !_isSending,
-              onSubmitted: (_) => _sendHostMessage(room),
+              onSubmitted: (_) => _sendHostMessage(room, l10n),
             ),
           ),
           const SizedBox(width: 8),
           IconButton(
-            onPressed: _isSending ? null : () => _sendHostMessage(room),
+            onPressed: _isSending ? null : () => _sendHostMessage(room, l10n),
             icon: _isSending
                 ? const SizedBox(
                     width: 24,
@@ -807,7 +807,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  Future<void> _sendHostMessage(RoomModel room) async {
+  Future<void> _sendHostMessage(RoomModel room, AppLocalizations l10n) async {
     if (_messageController.text.trim().isEmpty) return;
 
     setState(() => _isSending = true);
@@ -815,7 +815,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     await ref.read(roomNotifierProvider.notifier).sendMessage(
           roomCode: widget.roomCode,
           playerId: room.hostId,
-          playerName: '${room.hostName} (Host)',
+          playerName: '${room.hostName} (${l10n.host})',
           text: _messageController.text.trim(),
           type: MessageType.comment,
         );
