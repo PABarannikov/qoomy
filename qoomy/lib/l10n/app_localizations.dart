@@ -125,6 +125,8 @@ class AppLocalizations {
       'correctAnswer': 'Correct Answer',
       'markAsCorrect': 'Mark as correct',
       'markAsWrong': 'Mark as wrong',
+      'show': 'Show',
+      'hide': 'Hide',
 
       // Results
       'gameResults': 'Game Results',
@@ -251,6 +253,8 @@ class AppLocalizations {
       'correctAnswer': 'Правильный ответ',
       'markAsCorrect': 'Отметить как правильный',
       'markAsWrong': 'Отметить как неправильный',
+      'show': 'Показать',
+      'hide': 'Скрыть',
 
       // Results
       'gameResults': 'Результаты',
@@ -363,6 +367,8 @@ class AppLocalizations {
   String get correctAnswer => get('correctAnswer');
   String get markAsCorrect => get('markAsCorrect');
   String get markAsWrong => get('markAsWrong');
+  String get show => get('show');
+  String get hide => get('hide');
   String get gameResults => get('gameResults');
   String get winner => get('winner');
   String get noWinner => get('noWinner');

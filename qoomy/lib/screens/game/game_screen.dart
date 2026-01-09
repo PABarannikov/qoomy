@@ -115,7 +115,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               _buildQuestionCard(room, isHost, l10n),
               if (isHost) ...[
                 const SizedBox(height: 12),
-                _buildAnswerSection(room),
+                _buildAnswerSection(room, l10n),
               ],
             ],
           ),
@@ -130,6 +130,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               room.hostId,
               currentUser?.id,
               isHost,
+              l10n,
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
@@ -345,7 +346,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  Widget _buildAnswerSection(RoomModel room) {
+  Widget _buildAnswerSection(RoomModel room, AppLocalizations l10n) {
     return Card(
       color: _showAnswer ? QoomyTheme.successColor.withOpacity(0.1) : null,
       child: Padding(
@@ -361,7 +362,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     Icon(Icons.check_circle, color: QoomyTheme.successColor, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      'Correct Answer',
+                      l10n.correctAnswer,
                       style: TextStyle(
                         color: QoomyTheme.successColor,
                         fontWeight: FontWeight.bold,
@@ -372,7 +373,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 ),
                 TextButton(
                   onPressed: () => setState(() => _showAnswer = !_showAnswer),
-                  child: Text(_showAnswer ? 'Hide' : 'Show'),
+                  child: Text(_showAnswer ? l10n.hide : l10n.show),
                 ),
               ],
             ),
@@ -399,6 +400,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     String hostId,
     String? currentUserId,
     bool isHost,
+    AppLocalizations l10n,
   ) {
     if (messages.isEmpty) {
       return Center(
@@ -479,7 +481,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     const SizedBox(width: 8),
                   ],
                   Text(
-                    isMe ? 'You' : message.playerName,
+                    isMe ? l10n.you : message.playerName,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                   const SizedBox(width: 8),
@@ -490,7 +492,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      isAnswer ? 'ANSWER' : 'COMMENT',
+                      isAnswer ? l10n.answerLabel.toUpperCase() : l10n.comment.toUpperCase(),
                       style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -530,7 +532,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            message.isCorrect! ? 'Correct!' : 'Wrong',
+                            message.isCorrect! ? l10n.correct : l10n.wrong,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
@@ -559,7 +561,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     OutlinedButton.icon(
                       onPressed: () => _markAnswer(message.id, false),
                       icon: const Icon(Icons.close, size: 16),
-                      label: const Text('Wrong'),
+                      label: Text(l10n.wrong),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: QoomyTheme.errorColor,
                         side: BorderSide(color: QoomyTheme.errorColor),
@@ -570,7 +572,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ElevatedButton.icon(
                       onPressed: () => _markAnswer(message.id, true),
                       icon: const Icon(Icons.check, size: 16),
-                      label: const Text('Correct'),
+                      label: Text(l10n.correct),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: QoomyTheme.successColor,
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
