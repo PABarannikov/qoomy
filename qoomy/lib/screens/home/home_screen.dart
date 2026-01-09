@@ -166,93 +166,79 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildFilters(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            // Role filter
-            _buildFilterChip(
-              label: l10n.all,
-              isSelected: _roleFilter == RoleFilter.all,
-              onTap: () => setState(() => _roleFilter = RoleFilter.all),
-            ),
-            const SizedBox(width: 8),
-            _buildFilterChip(
-              label: l10n.asHost,
-              icon: Icons.star,
-              isSelected: _roleFilter == RoleFilter.host,
-              onTap: () => setState(() => _roleFilter = RoleFilter.host),
-            ),
-            const SizedBox(width: 8),
-            _buildFilterChip(
-              label: l10n.asPlayer,
-              icon: Icons.person,
-              isSelected: _roleFilter == RoleFilter.player,
-              onTap: () => setState(() => _roleFilter = RoleFilter.player),
-            ),
-            const SizedBox(width: 16),
-            Container(width: 1, height: 24, color: Colors.grey.shade300),
-            const SizedBox(width: 16),
-            // Status filter
-            _buildFilterChip(
-              label: l10n.active,
-              icon: Icons.play_circle,
-              isSelected: _statusFilter == StatusFilter.active,
-              onTap: () => setState(() => _statusFilter = _statusFilter == StatusFilter.active ? StatusFilter.all : StatusFilter.active),
-            ),
-            const SizedBox(width: 16),
-            Container(width: 1, height: 24, color: Colors.grey.shade300),
-            const SizedBox(width: 16),
-            // Unread filter
-            _buildFilterChip(
-              label: l10n.unread,
-              icon: Icons.mark_chat_unread,
-              isSelected: _unreadFilter == UnreadFilter.unread,
-              onTap: () => setState(() => _unreadFilter = _unreadFilter == UnreadFilter.unread ? UnreadFilter.all : UnreadFilter.unread),
-            ),
-          ],
-        ),
+      child: Row(
+        children: [
+          // Role filter
+          _buildIconFilterChip(
+            icon: Icons.apps,
+            tooltip: l10n.all,
+            isSelected: _roleFilter == RoleFilter.all,
+            onTap: () => setState(() => _roleFilter = RoleFilter.all),
+          ),
+          const SizedBox(width: 8),
+          _buildIconFilterChip(
+            icon: Icons.star,
+            tooltip: l10n.asHost,
+            isSelected: _roleFilter == RoleFilter.host,
+            onTap: () => setState(() => _roleFilter = RoleFilter.host),
+          ),
+          const SizedBox(width: 8),
+          _buildIconFilterChip(
+            icon: Icons.person,
+            tooltip: l10n.asPlayer,
+            isSelected: _roleFilter == RoleFilter.player,
+            onTap: () => setState(() => _roleFilter = RoleFilter.player),
+          ),
+          const SizedBox(width: 12),
+          Container(width: 1, height: 28, color: Colors.grey.shade300),
+          const SizedBox(width: 12),
+          // Status filter
+          _buildIconFilterChip(
+            icon: Icons.play_circle,
+            tooltip: l10n.active,
+            isSelected: _statusFilter == StatusFilter.active,
+            onTap: () => setState(() => _statusFilter = _statusFilter == StatusFilter.active ? StatusFilter.all : StatusFilter.active),
+          ),
+          const SizedBox(width: 12),
+          Container(width: 1, height: 28, color: Colors.grey.shade300),
+          const SizedBox(width: 12),
+          // Unread filter
+          _buildIconFilterChip(
+            icon: Icons.mark_chat_unread,
+            tooltip: l10n.unread,
+            isSelected: _unreadFilter == UnreadFilter.unread,
+            onTap: () => setState(() => _unreadFilter = _unreadFilter == UnreadFilter.unread ? UnreadFilter.all : UnreadFilter.unread),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildFilterChip({
-    required String label,
-    IconData? icon,
+  Widget _buildIconFilterChip({
+    required IconData icon,
+    required String tooltip,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade300,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? Colors.white : Colors.grey.shade600,
-              ),
-              const SizedBox(width: 4),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : Colors.grey.shade700,
-              ),
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade300,
             ),
-          ],
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: isSelected ? Colors.white : Colors.grey.shade600,
+          ),
         ),
       ),
     );
