@@ -351,52 +351,45 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            AnimatedCrossFade(
-              firstChild: Text(
-                room.question,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+            // Question text
+            Text(
+              room.question,
+              maxLines: showCollapsed ? 2 : null,
+              overflow: showCollapsed ? TextOverflow.ellipsis : TextOverflow.visible,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
-              secondChild: Text(
-                room.question,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              crossFadeState: showCollapsed
-                  ? CrossFadeState.showFirst
-                  : CrossFadeState.showSecond,
-              duration: const Duration(milliseconds: 200),
             ),
-            if (room.imageUrl != null && room.imageUrl!.isNotEmpty && !showCollapsed) ...[
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  room.imageUrl!,
-                  width: double.infinity,
-                  fit: BoxFit.contain,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 100,
-                      color: Colors.white24,
-                      child: const Center(
-                        child: CircularProgressIndicator(color: Colors.white70),
+            // Image (hidden when collapsed)
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              child: hasImage && !showCollapsed
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          room.imageUrl!,
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              height: 100,
+                              color: Colors.white24,
+                              child: const Center(
+                                child: CircularProgressIndicator(color: Colors.white70),
+                              ),
+                            );
+                          },
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        ),
                       ),
-                    );
-                  },
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              ),
-            ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
           ],
         ),
       ),
