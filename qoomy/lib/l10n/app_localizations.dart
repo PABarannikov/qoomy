@@ -46,7 +46,7 @@ class AppLocalizations {
       'passwordsNotMatch': 'Passwords do not match',
 
       // Home
-      'myRooms': 'My Rooms',
+      'myRooms': 'My Questions',
       'joinedRooms': 'Joined Rooms',
       'noRoomsYet': 'No rooms yet',
       'noRoomsDescription': 'Create a room to host a quiz or join an existing one',
@@ -175,7 +175,7 @@ class AppLocalizations {
       'passwordsNotMatch': 'Пароли не совпадают',
 
       // Home
-      'myRooms': 'Мои комнаты',
+      'myRooms': 'Мои вопросы',
       'joinedRooms': 'Комнаты участника',
       'noRoomsYet': 'Пока нет комнат',
       'noRoomsDescription': 'Создайте комнату или присоединитесь к существующей',
