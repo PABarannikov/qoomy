@@ -18,97 +18,95 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            const Text('Qoomy'),
-            const Spacer(),
-            // Language toggle
-            IconButton(
-              icon: Text(
-                ref.watch(localeProvider).languageCode.toUpperCase(),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
+        title: const Text('Qoomy'),
+        actions: [
+          // Language toggle
+          IconButton(
+            icon: Text(
+              ref.watch(localeProvider).languageCode.toUpperCase(),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
-              onPressed: () {
-                ref.read(localeProvider.notifier).toggleLocale();
-              },
-              tooltip: l10n.language,
             ),
-            // Profile button
-            currentUser.when(
-              data: (user) => user != null
-                  ? PopupMenuButton<String>(
-                      icon: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: QoomyTheme.primaryColor.withOpacity(0.1),
-                        backgroundImage: user.avatarUrl != null
-                            ? NetworkImage(user.avatarUrl!)
-                            : null,
-                        child: user.avatarUrl == null
-                            ? Text(
-                                user.displayName.isNotEmpty
-                                    ? user.displayName[0].toUpperCase()
-                                    : '?',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: QoomyTheme.primaryColor,
-                                ),
-                              )
-                            : null,
-                      ),
-                      onSelected: (value) async {
-                        if (value == 'logout') {
-                          await ref.read(authNotifierProvider.notifier).signOut();
-                          if (context.mounted) {
-                            context.go('/login');
-                          }
+            onPressed: () {
+              ref.read(localeProvider.notifier).toggleLocale();
+            },
+            tooltip: l10n.language,
+          ),
+          // Profile button
+          currentUser.when(
+            data: (user) => user != null
+                ? PopupMenuButton<String>(
+                    icon: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: QoomyTheme.primaryColor.withOpacity(0.1),
+                      backgroundImage: user.avatarUrl != null
+                          ? NetworkImage(user.avatarUrl!)
+                          : null,
+                      child: user.avatarUrl == null
+                          ? Text(
+                              user.displayName.isNotEmpty
+                                  ? user.displayName[0].toUpperCase()
+                                  : '?',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: QoomyTheme.primaryColor,
+                              ),
+                            )
+                          : null,
+                    ),
+                    onSelected: (value) async {
+                      if (value == 'logout') {
+                        await ref.read(authNotifierProvider.notifier).signOut();
+                        if (context.mounted) {
+                          context.go('/login');
                         }
-                      },
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          enabled: false,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user.displayName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        enabled: false,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user.displayName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
                               ),
-                              Text(
-                                '${l10n.games}: ${user.gamesPlayed} | ${l10n.wins}: ${user.gamesWon}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
+                            ),
+                            Text(
+                              '${l10n.games}: ${user.gamesPlayed} | ${l10n.wins}: ${user.gamesWon}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const PopupMenuDivider(),
-                        PopupMenuItem(
-                          value: 'logout',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.logout, size: 20),
-                              const SizedBox(width: 8),
-                              Text(l10n.logout),
-                            ],
-                          ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.logout, size: 20),
+                            const SizedBox(width: 8),
+                            Text(l10n.logout),
+                          ],
                         ),
-                      ],
-                    )
-                  : const SizedBox(),
-              loading: () => const SizedBox(),
-              error: (_, __) => const SizedBox(),
-            ),
-          ],
-        ),
+                      ),
+                    ],
+                  )
+                : const SizedBox(),
+            loading: () => const SizedBox(),
+            error: (_, __) => const SizedBox(),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: Center(
