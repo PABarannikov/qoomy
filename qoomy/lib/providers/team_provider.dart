@@ -4,6 +4,9 @@ import 'package:qoomy/models/team_model.dart';
 
 final teamServiceProvider = Provider<TeamService>((ref) => TeamService());
 
+/// Stores a pending team invite code for users who need to register/login first
+final pendingTeamInviteProvider = StateProvider<String?>((ref) => null);
+
 final teamProvider = StreamProvider.family<TeamModel?, String>((ref, teamId) {
   return ref.watch(teamServiceProvider).teamStream(teamId);
 });

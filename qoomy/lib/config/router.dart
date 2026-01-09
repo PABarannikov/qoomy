@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qoomy/providers/auth_provider.dart';
+import 'package:qoomy/providers/team_provider.dart';
 import 'package:qoomy/screens/auth/login_screen.dart';
 import 'package:qoomy/screens/auth/register_screen.dart';
 import 'package:qoomy/screens/home/home_screen.dart';
@@ -24,12 +25,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = authState.valueOrNull != null;
       final isAuthRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
+      final isJoinTeamRoute = state.matchedLocation.startsWith('/join-team/');
+
+      // If user is not logged in and trying to join a team via deep link,
+      // store the invite code and redirect to login
+      if (!isLoggedIn && isJoinTeamRoute) {
+        final inviteCode = state.pathParameters['inviteCode'];
+        if (inviteCode != null) {
+          ref.read(pendingTeamInviteProvider.notifier).state = inviteCode;
+        }
+        return '/login';
+      }
 
       if (!isLoggedIn && !isAuthRoute) {
         return '/login';
       }
 
+      // If logged in and on auth route, check for pending team invite
       if (isLoggedIn && isAuthRoute) {
+        final pendingInvite = ref.read(pendingTeamInviteProvider);
+        if (pendingInvite != null) {
+          return '/join-team/$pendingInvite';
+        }
         return '/';
       }
 

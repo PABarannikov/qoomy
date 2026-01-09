@@ -57,6 +57,8 @@ class _JoinTeamScreenState extends ConsumerState<JoinTeamScreen> {
     setState(() => _isLoading = false);
 
     if (teamId != null) {
+      // Clear pending invite after successful join
+      ref.read(pendingTeamInviteProvider.notifier).state = null;
       context.go('/teams/$teamId');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
