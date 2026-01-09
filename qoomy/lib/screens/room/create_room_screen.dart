@@ -10,6 +10,7 @@ import 'package:qoomy/models/room_model.dart';
 import 'package:qoomy/models/team_model.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
+import 'package:qoomy/widgets/app_header.dart';
 
 class CreateRoomScreen extends ConsumerStatefulWidget {
   const CreateRoomScreen({super.key});
@@ -82,9 +83,10 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
       if (roomCode != null) {
         context.go('/game/$roomCode');
       } else {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Failed to create room'),
+            content: Text(l10n.failedToCreateRoom),
             backgroundColor: QoomyTheme.errorColor,
           ),
         );
@@ -94,207 +96,213 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Room'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: QoomyTheme.maxContentWidth),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Question Field
-                    Text(
-                      'Question',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _questionController,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter your question...',
-                        prefixIcon: Icon(Icons.help_outline),
-                        alignLabelWithHint: true,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter a question';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Image Field (Optional)
-                    Text(
-                      'Image (Optional)',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_selectedImage != null) ...[
-                      Stack(
+        child: Column(
+          children: [
+            AppHeader(
+              title: l10n.createRoom,
+              showBackButton: true,
+              showTeamsButton: false,
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: QoomyTheme.maxContentWidth),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.memory(
-                              _selectedImage!,
-                              width: double.infinity,
-                              fit: BoxFit.contain,
-                            ),
+                          // Question Field
+                          Text(
+                            l10n.question,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: IconButton(
-                              onPressed: _removeImage,
-                              icon: const Icon(Icons.close),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.black54,
-                                foregroundColor: Colors.white,
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _questionController,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              hintText: l10n.questionHint,
+                              prefixIcon: const Icon(Icons.help_outline),
+                              alignLabelWithHint: true,
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return l10n.enterQuestion;
+                              }
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Image Field (Optional)
+                          Text(
+                            l10n.imageOptional,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                          if (_selectedImage != null) ...[
+                            Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.memory(
+                                    _selectedImage!,
+                                    width: double.infinity,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: IconButton(
+                                    onPressed: _removeImage,
+                                    icon: const Icon(Icons.close),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.black54,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else ...[
+                            OutlinedButton.icon(
+                              onPressed: _pickImage,
+                              icon: const Icon(Icons.image_outlined),
+                              label: Text(l10n.addImage),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
                               ),
                             ),
+                          ],
+
+                          const SizedBox(height: 24),
+
+                          // Answer Field
+                          Text(
+                            l10n.correctAnswer,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            l10n.onlyYouSeeThis,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _answerController,
+                            decoration: InputDecoration(
+                              hintText: l10n.answerHint,
+                              prefixIcon: const Icon(Icons.check_circle_outline),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return l10n.enterAnswer;
+                              }
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Comment Field (Optional)
+                          Text(
+                            l10n.commentOptional,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            l10n.commentDescription,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _commentController,
+                            maxLines: 2,
+                            decoration: InputDecoration(
+                              hintText: l10n.addExplanation,
+                              prefixIcon: const Icon(Icons.comment_outlined),
+                              alignLabelWithHint: true,
+                            ),
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Evaluation Mode Selection
+                          Text(
+                            l10n.evaluationMode,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Manual Mode Card
+                          _buildModeCard(
+                            mode: EvaluationMode.manual,
+                            title: l10n.manual,
+                            description: l10n.manualDesc,
+                            icon: Icons.person_outline,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // AI Mode Card
+                          _buildModeCard(
+                            mode: EvaluationMode.ai,
+                            title: l10n.aiAssisted,
+                            description: l10n.aiAssistedDesc,
+                            icon: Icons.smart_toy_outlined,
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Team Selection
+                          _buildTeamSelector(),
+
+                          const SizedBox(height: 32),
+
+                          // Create Button
+                          ElevatedButton(
+                            onPressed: _isCreating ? null : _createRoom,
+                            child: _isCreating
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(l10n.createRoom),
                           ),
                         ],
                       ),
-                    ] else ...[
-                      OutlinedButton.icon(
-                        onPressed: _pickImage,
-                        icon: const Icon(Icons.image_outlined),
-                        label: const Text('Add Image'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 24),
-
-                    // Answer Field
-                    Text(
-                      'Correct Answer',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Only you will see this',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _answerController,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter the correct answer...',
-                        prefixIcon: Icon(Icons.check_circle_outline),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter the correct answer';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Comment Field (Optional)
-                    Text(
-                      'Comment (Optional)',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Shown to players after the answer is revealed',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _commentController,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        hintText: 'Add explanation or fun fact...',
-                        prefixIcon: Icon(Icons.comment_outlined),
-                        alignLabelWithHint: true,
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Evaluation Mode Selection
-                    Text(
-                      'Evaluation Mode',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Manual Mode Card
-                    _buildModeCard(
-                      mode: EvaluationMode.manual,
-                      title: 'Manual',
-                      description: 'You mark answers as correct or incorrect',
-                      icon: Icons.person_outline,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // AI Mode Card
-                    _buildModeCard(
-                      mode: EvaluationMode.ai,
-                      title: 'AI Assisted',
-                      description: 'AI suggests correctness, you confirm',
-                      icon: Icons.smart_toy_outlined,
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Team Selection
-                    _buildTeamSelector(),
-
-                    const SizedBox(height: 32),
-
-                    // Create Button
-                    ElevatedButton(
-                      onPressed: _isCreating ? null : _createRoom,
-                      child: _isCreating
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Create Room'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

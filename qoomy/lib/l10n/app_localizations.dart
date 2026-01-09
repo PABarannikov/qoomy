@@ -183,6 +183,16 @@ class AppLocalizations {
       'enterEmailToSearch': 'Enter email to search for users',
       'add': 'Add',
       'alreadyMember': 'Already a member',
+
+      // Create room extended
+      'imageOptional': 'Image (Optional)',
+      'onlyYouSeeThis': 'Only you will see this',
+      'commentDescription': 'Shown to players after the answer is revealed',
+      'addExplanation': 'Add explanation or fun fact...',
+      'aiAssisted': 'AI Assisted',
+      'aiAssistedDesc': 'AI suggests correctness, you confirm',
+      'manualDesc': 'You mark answers as correct or incorrect',
+      'failedToCreateRoom': 'Failed to create room',
     },
     'ru': {
       // App
@@ -354,6 +364,16 @@ class AppLocalizations {
       'enterEmailToSearch': 'Введите email для поиска пользователей',
       'add': 'Добавить',
       'alreadyMember': 'Уже участник',
+
+      // Create room extended
+      'imageOptional': 'Изображение (необязательно)',
+      'onlyYouSeeThis': 'Виден только вам',
+      'commentDescription': 'Показывается игрокам после раскрытия ответа',
+      'addExplanation': 'Добавьте пояснение или интересный факт...',
+      'aiAssisted': 'AI помощник',
+      'aiAssistedDesc': 'AI предлагает оценку, вы подтверждаете',
+      'manualDesc': 'Вы отмечаете ответы как правильные или неправильные',
+      'failedToCreateRoom': 'Не удалось создать комнату',
     },
   };
 
@@ -503,6 +523,14 @@ class AppLocalizations {
   String get enterEmailToSearch => get('enterEmailToSearch');
   String get add => get('add');
   String get alreadyMember => get('alreadyMember');
+  String get imageOptional => get('imageOptional');
+  String get onlyYouSeeThis => get('onlyYouSeeThis');
+  String get commentDescription => get('commentDescription');
+  String get addExplanation => get('addExplanation');
+  String get aiAssisted => get('aiAssisted');
+  String get aiAssistedDesc => get('aiAssistedDesc');
+  String get manualDesc => get('manualDesc');
+  String get failedToCreateRoom => get('failedToCreateRoom');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
