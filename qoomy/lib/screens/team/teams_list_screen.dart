@@ -30,7 +30,7 @@ class TeamsListScreen extends ConsumerWidget {
                       // Back button
                       IconButton(
                         icon: const Icon(Icons.arrow_back),
-                        onPressed: () => context.pop(),
+                        onPressed: () => context.go('/'),
                       ),
                       const Spacer(),
                       // Title
