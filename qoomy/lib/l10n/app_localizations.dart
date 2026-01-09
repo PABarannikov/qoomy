@@ -176,6 +176,13 @@ class AppLocalizations {
       'teamNotFound': 'Team not found or invalid invite code',
       'enterTeamCode': 'Enter Team Code',
       'teamCodeHint': 'e.g. ABCD1234',
+      'addMember': 'Add Member',
+      'searchByEmail': 'Search by email',
+      'userNotFound': 'User not found',
+      'memberAdded': 'Member added',
+      'enterEmailToSearch': 'Enter email to search for users',
+      'add': 'Add',
+      'alreadyMember': 'Already a member',
     },
     'ru': {
       // App
@@ -340,6 +347,13 @@ class AppLocalizations {
       'teamNotFound': 'Команда не найдена или неверный код',
       'enterTeamCode': 'Введите код команды',
       'teamCodeHint': 'например ABCD1234',
+      'addMember': 'Добавить участника',
+      'searchByEmail': 'Поиск по email',
+      'userNotFound': 'Пользователь не найден',
+      'memberAdded': 'Участник добавлен',
+      'enterEmailToSearch': 'Введите email для поиска пользователей',
+      'add': 'Добавить',
+      'alreadyMember': 'Уже участник',
     },
   };
 
@@ -482,6 +496,13 @@ class AppLocalizations {
   String get teamNotFound => get('teamNotFound');
   String get enterTeamCode => get('enterTeamCode');
   String get teamCodeHint => get('teamCodeHint');
+  String get addMember => get('addMember');
+  String get searchByEmail => get('searchByEmail');
+  String get userNotFound => get('userNotFound');
+  String get memberAdded => get('memberAdded');
+  String get enterEmailToSearch => get('enterEmailToSearch');
+  String get add => get('add');
+  String get alreadyMember => get('alreadyMember');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

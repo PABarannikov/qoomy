@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:qoomy/providers/auth_provider.dart';
 import 'package:qoomy/providers/team_provider.dart';
 import 'package:qoomy/models/team_model.dart';
+import 'package:qoomy/models/user_model.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
 
@@ -200,6 +201,14 @@ class TeamDetailsScreen extends ConsumerWidget {
                           color: Colors.grey.shade600,
                         ),
                       ),
+                      if (isOwner) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(Icons.person_add, color: QoomyTheme.primaryColor, size: 20),
+                          onPressed: () => _showAddMemberDialog(context, ref, team, userId, l10n),
+                          tooltip: l10n.addMember,
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -437,6 +446,206 @@ class TeamDetailsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showAddMemberDialog(
+    BuildContext context,
+    WidgetRef ref,
+    TeamModel team,
+    String requesterId,
+    AppLocalizations l10n,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => _AddMemberDialog(
+        team: team,
+        requesterId: requesterId,
+        l10n: l10n,
+      ),
+    );
+  }
+}
+
+class _AddMemberDialog extends ConsumerStatefulWidget {
+  final TeamModel team;
+  final String requesterId;
+  final AppLocalizations l10n;
+
+  const _AddMemberDialog({
+    required this.team,
+    required this.requesterId,
+    required this.l10n,
+  });
+
+  @override
+  ConsumerState<_AddMemberDialog> createState() => _AddMemberDialogState();
+}
+
+class _AddMemberDialogState extends ConsumerState<_AddMemberDialog> {
+  final _emailController = TextEditingController();
+  List<UserModel> _searchResults = [];
+  bool _isSearching = false;
+  bool _isAdding = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _searchUsers() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _errorMessage = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final results = await ref.read(teamServiceProvider).searchUsersByEmail(email);
+      // Filter out users already in the team
+      final filteredResults = results
+          .where((user) => !widget.team.memberIds.contains(user.id))
+          .toList();
+
+      setState(() {
+        _searchResults = filteredResults;
+        _isSearching = false;
+        if (filteredResults.isEmpty && email.isNotEmpty) {
+          _errorMessage = widget.l10n.userNotFound;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isSearching = false;
+        _errorMessage = 'Error: $e';
+      });
+    }
+  }
+
+  Future<void> _addMember(UserModel user) async {
+    setState(() => _isAdding = true);
+
+    try {
+      await ref.read(teamServiceProvider).addMemberById(
+            teamId: widget.team.id,
+            userId: user.id,
+            userName: user.displayName,
+            requesterId: widget.requesterId,
+          );
+
+      ref.invalidate(teamProvider(widget.team.id));
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(widget.l10n.memberAdded)),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isAdding = false;
+        _errorMessage = 'Error: $e';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.l10n.addMember),
+      content: SizedBox(
+        width: 300,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                labelText: widget.l10n.email,
+                hintText: widget.l10n.searchByEmail,
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              keyboardType: TextInputType.emailAddress,
+              onChanged: (_) => _searchUsers(),
+            ),
+            const SizedBox(height: 16),
+            if (_isSearching)
+              const Center(child: CircularProgressIndicator())
+            else if (_errorMessage != null)
+              Text(
+                _errorMessage!,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                textAlign: TextAlign.center,
+              )
+            else if (_searchResults.isNotEmpty)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 200),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _searchResults.length,
+                  itemBuilder: (context, index) {
+                    final user = _searchResults[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: QoomyTheme.primaryColor.withOpacity(0.1),
+                        child: Text(
+                          user.displayName.isNotEmpty
+                              ? user.displayName[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: QoomyTheme.primaryColor,
+                          ),
+                        ),
+                      ),
+                      title: Text(user.displayName),
+                      subtitle: Text(
+                        user.email,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      trailing: _isAdding
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : IconButton(
+                              icon: Icon(Icons.add_circle, color: QoomyTheme.primaryColor),
+                              onPressed: () => _addMember(user),
+                            ),
+                    );
+                  },
+                ),
+              )
+            else if (_emailController.text.isEmpty)
+              Text(
+                widget.l10n.enterEmailToSearch,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(widget.l10n.hide),
+        ),
+      ],
     );
   }
 }

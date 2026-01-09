@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qoomy/models/team_model.dart';
+import 'package:qoomy/models/user_model.dart';
 
 class TeamService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -275,5 +276,76 @@ class TeamService {
   Future<List<TeamMember>> getTeamMembers(String teamId) async {
     final team = await getTeam(teamId);
     return team?.members ?? [];
+  }
+
+  /// Search users by email (exact match or prefix)
+  Future<List<UserModel>> searchUsersByEmail(String email) async {
+    if (email.isEmpty) return [];
+
+    final normalizedEmail = email.toLowerCase().trim();
+
+    // Search for exact match or emails starting with the query
+    final query = await _firestore
+        .collection('users')
+        .where('email', isGreaterThanOrEqualTo: normalizedEmail)
+        .where('email', isLessThan: '${normalizedEmail}z')
+        .limit(10)
+        .get();
+
+    return query.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+  }
+
+  /// Get user by exact email
+  Future<UserModel?> getUserByEmail(String email) async {
+    final normalizedEmail = email.toLowerCase().trim();
+
+    final query = await _firestore
+        .collection('users')
+        .where('email', isEqualTo: normalizedEmail)
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) return null;
+    return UserModel.fromFirestore(query.docs.first);
+  }
+
+  /// Add a member to the team by their user ID (owner only)
+  Future<bool> addMemberById({
+    required String teamId,
+    required String userId,
+    required String userName,
+    required String requesterId,
+  }) async {
+    final team = await getTeam(teamId);
+    if (team == null) return false;
+
+    // Only owner can add members
+    if (team.ownerId != requesterId) {
+      throw Exception('Only the team owner can add members.');
+    }
+
+    // Already a member
+    if (team.memberIds.contains(userId)) return true;
+
+    final member = TeamMember(
+      id: userId,
+      name: userName,
+      role: TeamMemberRole.member,
+      joinedAt: DateTime.now(),
+    );
+
+    final batch = _firestore.batch();
+
+    batch.set(
+      _teamsCollection.doc(teamId).collection('members').doc(userId),
+      member.toFirestore(),
+    );
+
+    batch.update(_teamsCollection.doc(teamId), {
+      'memberIds': FieldValue.arrayUnion([userId]),
+    });
+
+    await batch.commit();
+    return true;
   }
 }
