@@ -160,7 +160,17 @@ class HomeScreen extends ConsumerWidget {
               .where((r) => r.hostId != userId)
               .toList();
 
-          if (hostedRooms.isEmpty && playerRooms.isEmpty) {
+          // Combine all rooms and sort by creation time (newest first)
+          final allRooms = <MapEntry<RoomModel, bool>>[];
+          for (final room in hostedRooms) {
+            allRooms.add(MapEntry(room, true)); // isHost = true
+          }
+          for (final room in playerRooms) {
+            allRooms.add(MapEntry(room, false)); // isHost = false
+          }
+          allRooms.sort((a, b) => b.key.createdAt.compareTo(a.key.createdAt));
+
+          if (allRooms.isEmpty) {
             return _buildEmptyState(context);
           }
 
@@ -172,31 +182,12 @@ class HomeScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // My Rooms (hosted)
-                if (hostedRooms.isNotEmpty) ...[
-                  _buildSectionHeader(AppLocalizations.of(context).myRooms, Icons.star, hostedRooms.length),
-                  const SizedBox(height: 8),
-                  ...hostedRooms.map((room) => _buildRoomCard(
-                    context,
-                    room,
-                    isHost: true,
-                    userId: userId,
-                  )),
-                  const SizedBox(height: 24),
-                ],
-
-                // Joined Rooms
-                if (playerRooms.isNotEmpty) ...[
-                  _buildSectionHeader(AppLocalizations.of(context).joinedRooms, Icons.group, playerRooms.length),
-                  const SizedBox(height: 8),
-                  ...playerRooms.map((room) => _buildRoomCard(
-                    context,
-                    room,
-                    isHost: false,
-                    userId: userId,
-                  )),
-                ],
-
+                ...allRooms.map((entry) => _buildRoomCard(
+                  context,
+                  entry.key,
+                  isHost: entry.value,
+                  userId: userId,
+                )),
                 const SizedBox(height: 16),
               ],
             ),
