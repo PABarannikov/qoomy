@@ -167,7 +167,7 @@ class TeamDetailsScreen extends ConsumerWidget {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        final inviteUrl = 'https://qoomy-quiz-game.web.app/join-team/${team.inviteCode}';
+                        final inviteUrl = 'https://qoomy.online/join-team/${team.inviteCode}';
                         final text = '${l10n.joinTeam}: ${team.name}\n$inviteUrl';
                         Clipboard.setData(ClipboardData(text: text));
                         ScaffoldMessenger.of(context).showSnackBar(
