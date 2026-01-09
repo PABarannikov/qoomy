@@ -149,6 +149,33 @@ class AppLocalizations {
       'active': 'Active',
       'unread': 'Unread',
       'noMatchingQuestions': 'No matching questions',
+
+      // Teams
+      'teams': 'Teams',
+      'myTeams': 'My Teams',
+      'createTeam': 'Create Team',
+      'joinTeam': 'Join Team',
+      'teamName': 'Team Name',
+      'teamNameHint': 'Enter team name',
+      'enterTeamName': 'Please enter team name',
+      'inviteCode': 'Invite Code',
+      'inviteCodeCopied': 'Invite code copied!',
+      'shareInvite': 'Share Invite',
+      'members': 'Members',
+      'member': 'Member',
+      'owner': 'Owner',
+      'leaveTeam': 'Leave Team',
+      'deleteTeam': 'Delete Team',
+      'confirmLeaveTeam': 'Are you sure you want to leave this team?',
+      'confirmDeleteTeam': 'Are you sure you want to delete this team? All members will be removed.',
+      'noTeamsYet': 'No teams yet',
+      'noTeamsDescription': 'Create a team or join an existing one using an invite code',
+      'selectTeam': 'Select Team',
+      'selectTeamDescription': 'Team members will automatically join this room',
+      'noTeam': 'No Team',
+      'teamNotFound': 'Team not found or invalid invite code',
+      'enterTeamCode': 'Enter Team Code',
+      'teamCodeHint': 'e.g. ABCD1234',
     },
     'ru': {
       // App
@@ -286,6 +313,33 @@ class AppLocalizations {
       'active': 'Активные',
       'unread': 'Непрочитанные',
       'noMatchingQuestions': 'Нет подходящих вопросов',
+
+      // Teams
+      'teams': 'Команды',
+      'myTeams': 'Мои команды',
+      'createTeam': 'Создать команду',
+      'joinTeam': 'Присоединиться к команде',
+      'teamName': 'Название команды',
+      'teamNameHint': 'Введите название команды',
+      'enterTeamName': 'Введите название команды',
+      'inviteCode': 'Код приглашения',
+      'inviteCodeCopied': 'Код скопирован!',
+      'shareInvite': 'Поделиться приглашением',
+      'members': 'Участники',
+      'member': 'Участник',
+      'owner': 'Владелец',
+      'leaveTeam': 'Выйти из команды',
+      'deleteTeam': 'Удалить команду',
+      'confirmLeaveTeam': 'Вы уверены, что хотите выйти из этой команды?',
+      'confirmDeleteTeam': 'Вы уверены, что хотите удалить эту команду? Все участники будут удалены.',
+      'noTeamsYet': 'Пока нет команд',
+      'noTeamsDescription': 'Создайте команду или присоединитесь к существующей по коду приглашения',
+      'selectTeam': 'Выбрать команду',
+      'selectTeamDescription': 'Участники команды автоматически присоединятся к комнате',
+      'noTeam': 'Без команды',
+      'teamNotFound': 'Команда не найдена или неверный код',
+      'enterTeamCode': 'Введите код команды',
+      'teamCodeHint': 'например ABCD1234',
     },
   };
 
@@ -403,6 +457,31 @@ class AppLocalizations {
   String get active => get('active');
   String get unread => get('unread');
   String get noMatchingQuestions => get('noMatchingQuestions');
+  String get teams => get('teams');
+  String get myTeams => get('myTeams');
+  String get createTeam => get('createTeam');
+  String get joinTeam => get('joinTeam');
+  String get teamName => get('teamName');
+  String get teamNameHint => get('teamNameHint');
+  String get enterTeamName => get('enterTeamName');
+  String get inviteCode => get('inviteCode');
+  String get inviteCodeCopied => get('inviteCodeCopied');
+  String get shareInvite => get('shareInvite');
+  String get members => get('members');
+  String get member => get('member');
+  String get owner => get('owner');
+  String get leaveTeam => get('leaveTeam');
+  String get deleteTeam => get('deleteTeam');
+  String get confirmLeaveTeam => get('confirmLeaveTeam');
+  String get confirmDeleteTeam => get('confirmDeleteTeam');
+  String get noTeamsYet => get('noTeamsYet');
+  String get noTeamsDescription => get('noTeamsDescription');
+  String get selectTeam => get('selectTeam');
+  String get selectTeamDescription => get('selectTeamDescription');
+  String get noTeam => get('noTeam');
+  String get teamNotFound => get('teamNotFound');
+  String get enterTeamCode => get('enterTeamCode');
+  String get teamCodeHint => get('teamCodeHint');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

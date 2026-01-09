@@ -41,6 +41,7 @@ class RoomNotifier extends StateNotifier<AsyncValue<String?>> {
     required String answer,
     String? comment,
     Uint8List? imageBytes,
+    String? teamId,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -52,6 +53,7 @@ class RoomNotifier extends StateNotifier<AsyncValue<String?>> {
         answer: answer,
         comment: comment,
         imageBytes: imageBytes,
+        teamId: teamId,
       );
       state = AsyncValue.data(roomCode);
       return roomCode;

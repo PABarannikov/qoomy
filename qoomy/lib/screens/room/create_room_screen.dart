@@ -5,8 +5,11 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import 'package:qoomy/providers/auth_provider.dart';
 import 'package:qoomy/providers/room_provider.dart';
+import 'package:qoomy/providers/team_provider.dart';
 import 'package:qoomy/models/room_model.dart';
+import 'package:qoomy/models/team_model.dart';
 import 'package:qoomy/config/theme.dart';
+import 'package:qoomy/l10n/app_localizations.dart';
 
 class CreateRoomScreen extends ConsumerStatefulWidget {
   const CreateRoomScreen({super.key});
@@ -25,6 +28,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   bool _isCreating = false;
   Uint8List? _selectedImage;
   String? _selectedImageName;
+  TeamModel? _selectedTeam;
 
   @override
   void dispose() {
@@ -70,6 +74,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
           answer: _answerController.text.trim(),
           comment: _commentController.text.trim().isEmpty ? null : _commentController.text.trim(),
           imageBytes: _selectedImage,
+          teamId: _selectedTeam?.id,
         );
 
     if (mounted) {
@@ -266,6 +271,11 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
 
                     const SizedBox(height: 32),
 
+                    // Team Selection
+                    _buildTeamSelector(),
+
+                    const SizedBox(height: 32),
+
                     // Create Button
                     ElevatedButton(
                       onPressed: _isCreating ? null : _createRoom,
@@ -359,6 +369,128 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                 color: QoomyTheme.primaryColor,
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTeamSelector() {
+    final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final l10n = AppLocalizations.of(context);
+
+    if (currentUser == null) return const SizedBox.shrink();
+
+    final teamsAsync = ref.watch(userTeamsProvider(currentUser.id));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.selectTeam,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.selectTeamDescription,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey,
+              ),
+        ),
+        const SizedBox(height: 12),
+        teamsAsync.when(
+          data: (teams) => Column(
+            children: [
+              // No Team option
+              _buildTeamCard(null),
+              ...teams.map((team) => _buildTeamCard(team)),
+            ],
+          ),
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (e, _) => Text('Error: $e'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTeamCard(TeamModel? team) {
+    final isSelected = _selectedTeam?.id == team?.id;
+    final l10n = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTeam = team),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
+            ),
+            color: isSelected
+                ? QoomyTheme.primaryColor.withOpacity(0.1)
+                : Colors.transparent,
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: team == null
+                    ? Colors.grey.shade200
+                    : QoomyTheme.primaryColor.withOpacity(0.1),
+                child: team == null
+                    ? Icon(Icons.group_off, color: Colors.grey.shade600)
+                    : Text(
+                        team.name.isNotEmpty ? team.name[0].toUpperCase() : '?',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: QoomyTheme.primaryColor,
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      team?.name ?? l10n.noTeam,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isSelected
+                            ? QoomyTheme.primaryColor
+                            : Colors.black87,
+                      ),
+                    ),
+                    if (team != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '${team.memberCount} ${l10n.members.toLowerCase()}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (isSelected)
+                Icon(
+                  Icons.check_circle,
+                  color: QoomyTheme.primaryColor,
+                ),
+            ],
+          ),
         ),
       ),
     );

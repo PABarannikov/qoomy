@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:qoomy/models/room_model.dart';
 import 'package:qoomy/models/chat_message_model.dart';
+import 'package:qoomy/models/team_model.dart';
 
 class RoomService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -47,6 +48,7 @@ class RoomService {
     required String answer,
     String? comment,
     Uint8List? imageBytes,
+    String? teamId,
   }) async {
     String roomCode;
     bool codeExists = true;
@@ -78,7 +80,47 @@ class RoomService {
 
     await _roomsCollection.doc(roomCode).set(room.toFirestore());
 
+    // Auto-join team members if team is selected
+    if (teamId != null) {
+      await _autoJoinTeamMembers(roomCode, hostId, teamId);
+    }
+
     return roomCode;
+  }
+
+  Future<void> _autoJoinTeamMembers(String roomCode, String hostId, String teamId) async {
+    try {
+      // Get team members
+      final membersSnapshot = await _firestore
+          .collection('teams')
+          .doc(teamId)
+          .collection('members')
+          .get();
+
+      final batch = _firestore.batch();
+
+      for (final memberDoc in membersSnapshot.docs) {
+        final member = TeamMember.fromFirestore(memberDoc);
+
+        // Skip the host - they created the room, not a player
+        if (member.id == hostId) continue;
+
+        final player = Player(
+          id: member.id,
+          name: member.name,
+          joinedAt: DateTime.now(),
+        );
+
+        batch.set(
+          _roomsCollection.doc(roomCode).collection('players').doc(member.id),
+          player.toFirestore(),
+        );
+      }
+
+      await batch.commit();
+    } catch (e) {
+      print('Error auto-joining team members: $e');
+    }
   }
 
   Future<RoomModel?> getRoom(String roomCode) async {

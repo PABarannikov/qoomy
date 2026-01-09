@@ -51,6 +51,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                       const Spacer(),
+                      // Teams button
+                      IconButton(
+                        icon: const Icon(Icons.group),
+                        onPressed: () => context.push('/teams'),
+                        tooltip: l10n.teams,
+                      ),
                       // Language toggle
                       IconButton(
                         icon: Text(

@@ -10,6 +10,10 @@ import 'package:qoomy/screens/room/join_room_screen.dart';
 import 'package:qoomy/screens/room/lobby_screen.dart';
 import 'package:qoomy/screens/game/game_screen.dart';
 import 'package:qoomy/screens/game/results_screen.dart';
+import 'package:qoomy/screens/team/teams_list_screen.dart';
+import 'package:qoomy/screens/team/create_team_screen.dart';
+import 'package:qoomy/screens/team/team_details_screen.dart';
+import 'package:qoomy/screens/team/join_team_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -71,6 +75,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final roomCode = state.pathParameters['roomCode']!;
           return ResultsScreen(roomCode: roomCode);
+        },
+      ),
+      GoRoute(
+        path: '/teams',
+        builder: (context, state) => const TeamsListScreen(),
+      ),
+      GoRoute(
+        path: '/teams/create',
+        builder: (context, state) => const CreateTeamScreen(),
+      ),
+      GoRoute(
+        path: '/teams/:teamId',
+        builder: (context, state) {
+          final teamId = state.pathParameters['teamId']!;
+          return TeamDetailsScreen(teamId: teamId);
+        },
+      ),
+      GoRoute(
+        path: '/join-team',
+        builder: (context, state) => const JoinTeamScreen(),
+      ),
+      GoRoute(
+        path: '/join-team/:inviteCode',
+        builder: (context, state) {
+          final inviteCode = state.pathParameters['inviteCode']!;
+          return JoinTeamScreen(initialCode: inviteCode);
         },
       ),
     ],
