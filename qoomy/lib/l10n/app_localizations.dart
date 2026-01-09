@@ -232,7 +232,7 @@ class AppLocalizations {
       'noRoomsYet': 'Пока нет комнат',
       'noRoomsDescription': 'Создайте комнату или присоединитесь к существующей',
       'joinRoom': 'Присоединиться',
-      'createRoom': 'Создать комнату',
+      'createRoom': 'Задать вопрос',
       'games': 'Игр',
       'wins': 'Побед',
 

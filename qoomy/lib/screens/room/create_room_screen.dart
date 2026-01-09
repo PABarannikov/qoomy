@@ -282,18 +282,21 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                           const SizedBox(height: 32),
 
                           // Create Button
-                          ElevatedButton(
-                            onPressed: _isCreating ? null : _createRoom,
-                            child: _isCreating
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Text(l10n.createRoom),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isCreating ? null : _createRoom,
+                              child: _isCreating
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(l10n.createRoom),
+                            ),
                           ),
                         ],
                       ),
