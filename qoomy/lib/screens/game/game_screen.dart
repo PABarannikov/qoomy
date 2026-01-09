@@ -138,9 +138,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
         // Message input (different for host and player)
         if (isHost)
-          _buildHostMessageInput(room)
+          _buildHostMessageInput(room, l10n)
         else
-          _buildPlayerMessageInput(currentUser),
+          _buildPlayerMessageInput(currentUser, l10n),
       ],
     );
   }
@@ -693,7 +693,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  Widget _buildHostMessageInput(RoomModel room) {
+  Widget _buildHostMessageInput(RoomModel room, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -708,9 +708,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               color: Colors.orange,
               borderRadius: BorderRadius.circular(4),
             ),
-            child: const Text(
-              'HOST',
-              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+            child: Text(
+              l10n.host.toUpperCase(),
+              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 8),
@@ -718,7 +718,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             child: TextField(
               controller: _messageController,
               decoration: InputDecoration(
-                hintText: 'Type a message...',
+                hintText: l10n.typeComment,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -747,7 +747,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  Widget _buildPlayerMessageInput(dynamic currentUser) {
+  Widget _buildPlayerMessageInput(dynamic currentUser, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -774,7 +774,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       ),
                     ),
                     child: Text(
-                      'Answer',
+                      l10n.answerLabel,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: _selectedType == MessageType.answer ? Colors.white : Colors.grey.shade700,
@@ -800,7 +800,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       ),
                     ),
                     child: Text(
-                      'Comment',
+                      l10n.comment,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: _selectedType == MessageType.comment ? Colors.white : Colors.grey.shade700,
@@ -823,8 +823,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   controller: _messageController,
                   decoration: InputDecoration(
                     hintText: _selectedType == MessageType.answer
-                        ? 'Type your answer...'
-                        : 'Type a comment...',
+                        ? l10n.typeAnswer
+                        : l10n.typeComment,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: BorderSide.none,
