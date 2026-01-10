@@ -81,7 +81,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
     if (mounted) {
       setState(() => _isCreating = false);
       if (roomCode != null) {
-        context.go('/game/$roomCode');
+        context.go('/');
       } else {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
