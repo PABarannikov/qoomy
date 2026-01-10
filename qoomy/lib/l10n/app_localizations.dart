@@ -210,6 +210,19 @@ class AppLocalizations {
       'aiAssistedDesc': 'AI suggests correctness, you confirm',
       'manualDesc': 'You mark answers as correct or incorrect',
       'failedToCreateRoom': 'Failed to create room',
+
+      // Profile
+      'profile': 'Profile',
+      'statistics': 'Statistics',
+      'questionsAsHost': 'Questions as Host',
+      'questionsAsPlayer': 'Questions as Player',
+      'correctAnswersTotal': 'Correct Answers',
+      'wrongAnswers': 'Wrong Answers',
+      'correctFirst': 'First to Answer',
+      'correctNotFirst': 'Not First',
+      'totalPoints': 'Total Points',
+      'notLoggedIn': 'Not logged in',
+      'confirmLogout': 'Are you sure you want to log out?',
     },
     'ru': {
       // App
@@ -408,6 +421,19 @@ class AppLocalizations {
       'aiAssistedDesc': 'AI предлагает оценку, вы подтверждаете',
       'manualDesc': 'Вы отмечаете ответы как правильные или неправильные',
       'failedToCreateRoom': 'Не удалось создать комнату',
+
+      // Profile
+      'profile': 'Профиль',
+      'statistics': 'Статистика',
+      'questionsAsHost': 'Вопросов задано',
+      'questionsAsPlayer': 'Вопросов отвечено',
+      'correctAnswersTotal': 'Правильных ответов',
+      'wrongAnswers': 'Неправильных ответов',
+      'correctFirst': 'Первый ответ',
+      'correctNotFirst': 'Не первый',
+      'totalPoints': 'Всего очков',
+      'notLoggedIn': 'Не авторизован',
+      'confirmLogout': 'Вы уверены, что хотите выйти?',
     },
   };
 
@@ -582,6 +608,17 @@ class AppLocalizations {
   String get aiAssistedDesc => get('aiAssistedDesc');
   String get manualDesc => get('manualDesc');
   String get failedToCreateRoom => get('failedToCreateRoom');
+  String get profile => get('profile');
+  String get statistics => get('statistics');
+  String get questionsAsHost => get('questionsAsHost');
+  String get questionsAsPlayer => get('questionsAsPlayer');
+  String get correctAnswersTotal => get('correctAnswersTotal');
+  String get wrongAnswers => get('wrongAnswers');
+  String get correctFirst => get('correctFirst');
+  String get correctNotFirst => get('correctNotFirst');
+  String get totalPoints => get('totalPoints');
+  String get notLoggedIn => get('notLoggedIn');
+  String get confirmLogout => get('confirmLogout');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

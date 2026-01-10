@@ -125,6 +125,8 @@ class AppHeader extends ConsumerWidget {
                             if (context.mounted) {
                               context.go('/login');
                             }
+                          } else if (value == 'profile') {
+                            context.push('/profile');
                           } else {
                             onMenuItemSelected?.call(value);
                           }
@@ -154,6 +156,16 @@ class AppHeader extends ConsumerWidget {
                           ),
                           const PopupMenuDivider(),
                           if (extraMenuItems != null) ...extraMenuItems!,
+                          PopupMenuItem(
+                            value: 'profile',
+                            child: Row(
+                              children: [
+                                const Icon(Icons.person, size: 20),
+                                const SizedBox(width: 8),
+                                Text(l10n.profile),
+                              ],
+                            ),
+                          ),
                           PopupMenuItem(
                             value: 'logout',
                             child: Row(
