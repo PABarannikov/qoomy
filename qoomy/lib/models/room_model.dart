@@ -72,6 +72,8 @@ class RoomModel {
   final String answer;
   final String? comment;
   final String? imageUrl;
+  final String? teamId;
+  final String? teamName;
   final DateTime createdAt;
   final List<Player> players;
 
@@ -85,6 +87,8 @@ class RoomModel {
     required this.answer,
     this.comment,
     this.imageUrl,
+    this.teamId,
+    this.teamName,
     required this.createdAt,
     this.players = const [],
   });
@@ -107,6 +111,8 @@ class RoomModel {
       answer: data['answer'] ?? '',
       comment: data['comment'],
       imageUrl: data['imageUrl'],
+      teamId: data['teamId'],
+      teamName: data['teamName'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       players: players,
     );
@@ -122,6 +128,8 @@ class RoomModel {
       'answer': answer,
       'comment': comment,
       'imageUrl': imageUrl,
+      'teamId': teamId,
+      'teamName': teamName,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -138,6 +146,8 @@ class RoomModel {
     String? answer,
     String? comment,
     String? imageUrl,
+    String? teamId,
+    String? teamName,
     DateTime? createdAt,
     List<Player>? players,
   }) {
@@ -151,6 +161,8 @@ class RoomModel {
       answer: answer ?? this.answer,
       comment: comment ?? this.comment,
       imageUrl: imageUrl ?? this.imageUrl,
+      teamId: teamId ?? this.teamId,
+      teamName: teamName ?? this.teamName,
       createdAt: createdAt ?? this.createdAt,
       players: players ?? this.players,
     );

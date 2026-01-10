@@ -67,6 +67,15 @@ class RoomService {
       imageUrl = await _uploadImage(roomCode, imageBytes);
     }
 
+    // Get team name if team is selected
+    String? teamName;
+    if (teamId != null) {
+      final teamDoc = await _firestore.collection('teams').doc(teamId).get();
+      if (teamDoc.exists) {
+        teamName = (teamDoc.data() as Map<String, dynamic>)['name'] as String?;
+      }
+    }
+
     final room = RoomModel(
       code: roomCode,
       hostId: hostId,
@@ -77,6 +86,8 @@ class RoomService {
       answer: answer,
       comment: comment,
       imageUrl: imageUrl,
+      teamId: teamId,
+      teamName: teamName,
       createdAt: DateTime.now(),
     );
 
