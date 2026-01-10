@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qoomy/providers/auth_provider.dart';
@@ -575,25 +576,36 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                // Text input
+                // Text input with keyboard handling (Enter to send, Shift+Enter for newline)
                 Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: l10n.typeMessage,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
+                  child: KeyboardListener(
+                    focusNode: FocusNode(),
+                    onKeyEvent: (event) {
+                      if (event is KeyDownEvent &&
+                          event.logicalKey == LogicalKeyboardKey.enter &&
+                          !HardwareKeyboard.instance.isShiftPressed) {
+                        if (!_isSending && _messageController.text.trim().isNotEmpty) {
+                          _sendMessageWithType(currentUser, MessageType.comment);
+                        }
+                      }
+                    },
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: l10n.typeMessage,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      enabled: !_isSending,
+                      maxLines: 5,
+                      minLines: 1,
+                      keyboardType: TextInputType.multiline,
                     ),
-                    enabled: !_isSending,
-                    maxLines: 5,
-                    minLines: 1,
-                    keyboardType: TextInputType.multiline,
-                    textInputAction: TextInputAction.newline,
                   ),
                 ),
                 const SizedBox(width: 8),
