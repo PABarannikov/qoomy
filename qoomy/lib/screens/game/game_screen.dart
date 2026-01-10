@@ -971,14 +971,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.grey.shade100,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                     enabled: !_isSending,
+                    maxLines: 5,
+                    minLines: 1,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
                   ),
                 ),
                 const SizedBox(width: 8),
                 // Comment button (send icon) - circled style
                 Container(
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: QoomyTheme.primaryColor.withOpacity(0.1),
@@ -987,12 +993,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     onPressed: _isSending ? null : () => _sendPlayerMessageWithType(currentUser, MessageType.comment),
                     icon: _isSending
                         ? const SizedBox(
-                            width: 24,
-                            height: 24,
+                            width: 20,
+                            height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.send, color: QoomyTheme.primaryColor),
+                        : const Icon(Icons.send, color: QoomyTheme.primaryColor, size: 20),
                     tooltip: l10n.comment,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ),
                 // Answer button (only if user can still answer) - secondary style
