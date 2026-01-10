@@ -299,8 +299,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header row
-              Row(
+              // Header row - using Wrap to handle overflow on narrow screens
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   // Room code
                   Container(
@@ -319,7 +322,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
                   // Status badge
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -350,30 +352,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ],
                     ),
                   ),
-                  const Spacer(),
-                  // Unread badge
-                  unreadCountAsync.when(
-                    data: (count) => count > 0
-                        ? Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              color: QoomyTheme.secondaryColor,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              count > 99 ? '99+' : count.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
                   // Role badge
                   if (isHost)
                     Container(
@@ -398,6 +376,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ],
                       ),
                     ),
+                  // Unread badge
+                  unreadCountAsync.when(
+                    data: (count) => count > 0
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: QoomyTheme.secondaryColor,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              count > 99 ? '99+' : count.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
