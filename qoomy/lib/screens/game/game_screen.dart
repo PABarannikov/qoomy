@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +27,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   bool _isSending = false;
   ChatMessage? _replyingTo; // Message being replied to
   bool _initialScrollDone = false; // Track if we've scrolled on initial load
+
+  // Check if running on desktop (Enter sends message) vs mobile (Enter creates newline)
+  bool get _isDesktopPlatform {
+    if (kIsWeb) return true; // Web always uses Enter to send
+    return defaultTargetPlatform == TargetPlatform.windows ||
+           defaultTargetPlatform == TargetPlatform.macOS ||
+           defaultTargetPlatform == TargetPlatform.linux;
+  }
 
   @override
   void initState() {
@@ -909,37 +918,55 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Text input with keyboard handling (Enter to send, Shift+Enter for newline)
+                // Text input with keyboard handling (Enter to send on desktop, Shift+Enter for newline)
                 Expanded(
-                  child: KeyboardListener(
-                    focusNode: FocusNode(),
-                    onKeyEvent: (event) {
-                      if (event is KeyDownEvent &&
-                          event.logicalKey == LogicalKeyboardKey.enter &&
-                          !HardwareKeyboard.instance.isShiftPressed) {
-                        if (!_isSending && _messageController.text.trim().isNotEmpty) {
-                          _sendHostMessage(room, l10n);
-                        }
-                      }
-                    },
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: l10n.typeComment,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+                  child: _isDesktopPlatform
+                      ? KeyboardListener(
+                          focusNode: FocusNode(),
+                          onKeyEvent: (event) {
+                            if (event is KeyDownEvent &&
+                                event.logicalKey == LogicalKeyboardKey.enter &&
+                                !HardwareKeyboard.instance.isShiftPressed) {
+                              if (!_isSending && _messageController.text.trim().isNotEmpty) {
+                                _sendHostMessage(room, l10n);
+                              }
+                            }
+                          },
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: l10n.typeComment,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey.shade100,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                            enabled: !_isSending,
+                            maxLines: 5,
+                            minLines: 1,
+                            keyboardType: TextInputType.multiline,
+                          ),
+                        )
+                      : TextField(
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            hintText: l10n.typeComment,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade100,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          enabled: !_isSending,
+                          maxLines: 5,
+                          minLines: 1,
+                          keyboardType: TextInputType.multiline,
                         ),
-                        filled: true,
-                        fillColor: Colors.grey.shade100,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      enabled: !_isSending,
-                      maxLines: 5,
-                      minLines: 1,
-                      keyboardType: TextInputType.multiline,
-                    ),
-                  ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
@@ -974,37 +1001,55 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                // Text input with keyboard handling (Enter to send, Shift+Enter for newline)
+                // Text input with keyboard handling (Enter to send on desktop, Shift+Enter for newline)
                 Expanded(
-                  child: KeyboardListener(
-                    focusNode: FocusNode(),
-                    onKeyEvent: (event) {
-                      if (event is KeyDownEvent &&
-                          event.logicalKey == LogicalKeyboardKey.enter &&
-                          !HardwareKeyboard.instance.isShiftPressed) {
-                        if (!_isSending && _messageController.text.trim().isNotEmpty) {
-                          _sendPlayerMessageWithType(currentUser, MessageType.comment);
-                        }
-                      }
-                    },
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: l10n.typeMessage,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+                  child: _isDesktopPlatform
+                      ? KeyboardListener(
+                          focusNode: FocusNode(),
+                          onKeyEvent: (event) {
+                            if (event is KeyDownEvent &&
+                                event.logicalKey == LogicalKeyboardKey.enter &&
+                                !HardwareKeyboard.instance.isShiftPressed) {
+                              if (!_isSending && _messageController.text.trim().isNotEmpty) {
+                                _sendPlayerMessageWithType(currentUser, MessageType.comment);
+                              }
+                            }
+                          },
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: l10n.typeMessage,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey.shade100,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                            enabled: !_isSending,
+                            maxLines: 5,
+                            minLines: 1,
+                            keyboardType: TextInputType.multiline,
+                          ),
+                        )
+                      : TextField(
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            hintText: l10n.typeMessage,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade100,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          enabled: !_isSending,
+                          maxLines: 5,
+                          minLines: 1,
+                          keyboardType: TextInputType.multiline,
                         ),
-                        filled: true,
-                        fillColor: Colors.grey.shade100,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      enabled: !_isSending,
-                      maxLines: 5,
-                      minLines: 1,
-                      keyboardType: TextInputType.multiline,
-                    ),
-                  ),
                 ),
                 const SizedBox(width: 8),
                 // Comment button (send icon)
