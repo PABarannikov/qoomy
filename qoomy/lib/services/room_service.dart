@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -364,50 +365,66 @@ class RoomService {
   /// Stream of unread message count for a specific room and user
   /// Combines listening to both chat messages and user's lastRead timestamp
   Stream<int> unreadCountStream(String roomCode, String userId) {
-    // Listen to chat messages to detect new ones
-    final chatStream = _roomsCollection
+    // Create a controller to emit combined results
+    final controller = StreamController<int>.broadcast();
+
+    // Cache for latest values
+    List<QueryDocumentSnapshot>? latestChatDocs;
+    DateTime? latestLastReadAt;
+
+    void recalculateCount() {
+      if (latestChatDocs == null) return;
+
+      int count;
+      if (latestLastReadAt == null) {
+        count = latestChatDocs!.length;
+      } else {
+        count = 0;
+        for (final doc in latestChatDocs!) {
+          final data = doc.data() as Map<String, dynamic>;
+          final sentAt = (data['sentAt'] as Timestamp?)?.toDate();
+          if (sentAt != null && sentAt.isAfter(latestLastReadAt!)) {
+            count++;
+          }
+        }
+      }
+      controller.add(count);
+    }
+
+    // Listen to chat messages
+    final chatSubscription = _roomsCollection
         .doc(roomCode)
         .collection('chat')
-        .snapshots();
+        .snapshots()
+        .listen((chatSnapshot) {
+      latestChatDocs = chatSnapshot.docs;
+      recalculateCount();
+    });
 
     // Listen to user's lastRead timestamp
-    final readStream = _firestore
+    final readSubscription = _firestore
         .collection('users')
         .doc(userId)
         .collection('roomReads')
         .doc(roomCode)
-        .snapshots();
-
-    // Combine both streams - recalculate count when either changes
-    return chatStream.asyncMap((chatSnapshot) async {
-      // Get the latest lastReadAt
-      final readDoc = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('roomReads')
-          .doc(roomCode)
-          .get();
-
-      DateTime? lastReadAt;
+        .snapshots()
+        .listen((readDoc) {
       if (readDoc.exists && readDoc.data() != null) {
-        lastReadAt = (readDoc.data()!['lastReadAt'] as Timestamp?)?.toDate();
+        latestLastReadAt = (readDoc.data()!['lastReadAt'] as Timestamp?)?.toDate();
+      } else {
+        latestLastReadAt = null;
       }
-
-      // Count messages after lastReadAt
-      if (lastReadAt == null) {
-        return chatSnapshot.docs.length;
-      }
-
-      int count = 0;
-      for (final doc in chatSnapshot.docs) {
-        final data = doc.data();
-        final sentAt = (data['sentAt'] as Timestamp?)?.toDate();
-        if (sentAt != null && sentAt.isAfter(lastReadAt)) {
-          count++;
-        }
-      }
-      return count;
+      recalculateCount();
     });
+
+    // Clean up subscriptions when the stream is cancelled
+    controller.onCancel = () {
+      chatSubscription.cancel();
+      readSubscription.cancel();
+      controller.close();
+    };
+
+    return controller.stream;
   }
 
   /// Get unread counts for multiple rooms at once
