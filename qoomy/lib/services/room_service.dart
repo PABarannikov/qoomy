@@ -362,27 +362,51 @@ class RoomService {
   }
 
   /// Stream of unread message count for a specific room and user
+  /// Combines listening to both chat messages and user's lastRead timestamp
   Stream<int> unreadCountStream(String roomCode, String userId) {
-    return _firestore
+    // Listen to chat messages to detect new ones
+    final chatStream = _roomsCollection
+        .doc(roomCode)
+        .collection('chat')
+        .snapshots();
+
+    // Listen to user's lastRead timestamp
+    final readStream = _firestore
         .collection('users')
         .doc(userId)
         .collection('roomReads')
         .doc(roomCode)
-        .snapshots()
-        .asyncMap((readDoc) async {
+        .snapshots();
+
+    // Combine both streams - recalculate count when either changes
+    return chatStream.asyncMap((chatSnapshot) async {
+      // Get the latest lastReadAt
+      final readDoc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('roomReads')
+          .doc(roomCode)
+          .get();
+
       DateTime? lastReadAt;
       if (readDoc.exists && readDoc.data() != null) {
         lastReadAt = (readDoc.data()!['lastReadAt'] as Timestamp?)?.toDate();
       }
 
-      // Count messages after lastReadAt (or all if never read)
-      Query query = _roomsCollection.doc(roomCode).collection('chat');
-      if (lastReadAt != null) {
-        query = query.where('sentAt', isGreaterThan: Timestamp.fromDate(lastReadAt));
+      // Count messages after lastReadAt
+      if (lastReadAt == null) {
+        return chatSnapshot.docs.length;
       }
 
-      final snapshot = await query.count().get();
-      return snapshot.count ?? 0;
+      int count = 0;
+      for (final doc in chatSnapshot.docs) {
+        final data = doc.data();
+        final sentAt = (data['sentAt'] as Timestamp?)?.toDate();
+        if (sentAt != null && sentAt.isAfter(lastReadAt)) {
+          count++;
+        }
+      }
+      return count;
     });
   }
 
