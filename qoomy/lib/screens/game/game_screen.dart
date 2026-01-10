@@ -411,11 +411,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final isAnswer = message.type == MessageType.answer;
     final isMarked = message.isCorrect != null;
 
-    // In AI mode, determine if the answer should be hidden
-    // Hidden if: AI mode + answer type + (not evaluated yet OR correct)
+    // Determine if the answer should be hidden (applies to both AI and manual mode)
+    // Hidden if: answer type + (not evaluated yet OR correct)
     // Visible to: host, or the player who sent the answer
-    final bool shouldHideAnswer = isAiMode &&
-        isAnswer &&
+    // Wrong answers are revealed to everyone after marking
+    final bool shouldHideAnswer = isAnswer &&
         !isHost &&
         message.playerId != currentUserId &&
         (message.isCorrect == null || message.isCorrect == true);

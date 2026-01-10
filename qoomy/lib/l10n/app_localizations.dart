@@ -115,7 +115,7 @@ class AppLocalizations {
       'wrong': 'Wrong',
       'you': 'You',
       'hiddenAnswer': 'Answer hidden',
-      'answerHiddenUntilEvaluated': 'Answer will be revealed after AI evaluation',
+      'answerHiddenUntilEvaluated': 'Answer will be revealed after evaluation',
       'tapToRevealCorrectAnswer': 'Tap to reveal the correct answer',
 
       // Host screen
@@ -301,7 +301,7 @@ class AppLocalizations {
       'wrong': 'Неправильно',
       'you': 'Вы',
       'hiddenAnswer': 'Ответ скрыт',
-      'answerHiddenUntilEvaluated': 'Ответ будет показан после проверки AI',
+      'answerHiddenUntilEvaluated': 'Ответ будет показан после проверки',
       'tapToRevealCorrectAnswer': 'Нажмите чтобы увидеть правильный ответ',
 
       // Host screen
