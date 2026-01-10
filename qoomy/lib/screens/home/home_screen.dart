@@ -157,7 +157,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildRoomsList(BuildContext context, WidgetRef ref, String userId) {
     final hostedRoomsAsync = ref.watch(userHostedRoomsProvider(userId));
     final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider(userId));
-    final l10n = AppLocalizations.of(context);
 
     return hostedRoomsAsync.when(
       data: (hostedRooms) => joinedRoomsAsync.when(
@@ -495,28 +494,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
     );
-  }
-
-  Color _getStatusColor(RoomStatus status) {
-    switch (status) {
-      case RoomStatus.waiting:
-        return Colors.orange;
-      case RoomStatus.playing:
-        return QoomyTheme.successColor;
-      case RoomStatus.finished:
-        return Colors.grey;
-    }
-  }
-
-  String _getStatusText(RoomStatus status, AppLocalizations l10n) {
-    switch (status) {
-      case RoomStatus.waiting:
-        return l10n.waiting;
-      case RoomStatus.playing:
-        return l10n.playing;
-      case RoomStatus.finished:
-        return l10n.finished;
-    }
   }
 
   String _formatDate(DateTime date, AppLocalizations l10n) {

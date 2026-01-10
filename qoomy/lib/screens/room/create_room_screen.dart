@@ -28,7 +28,6 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   EvaluationMode _selectedMode = EvaluationMode.ai;
   bool _isCreating = false;
   Uint8List? _selectedImage;
-  String? _selectedImageName;
   TeamModel? _selectedTeam;
 
   @override
@@ -47,7 +46,6 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
       final bytes = await picked.readAsBytes();
       setState(() {
         _selectedImage = bytes;
-        _selectedImageName = picked.name;
       });
     }
   }
@@ -55,7 +53,6 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   void _removeImage() {
     setState(() {
       _selectedImage = null;
-      _selectedImageName = null;
     });
   }
 

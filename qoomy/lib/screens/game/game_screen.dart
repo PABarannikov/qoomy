@@ -20,7 +20,6 @@ class GameScreen extends ConsumerStatefulWidget {
 }
 
 class _GameScreenState extends ConsumerState<GameScreen> {
-  bool _showAnswer = false;
   bool _questionCollapsed = false; // Collapsed when user scrolls down
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
