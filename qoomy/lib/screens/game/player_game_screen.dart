@@ -581,6 +581,24 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Comment button (send icon) - circled style
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: QoomyTheme.primaryColor.withOpacity(0.1),
+                  ),
+                  child: IconButton(
+                    onPressed: _isSending ? null : () => _sendMessageWithType(currentUser, MessageType.comment),
+                    icon: _isSending
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send, color: QoomyTheme.primaryColor),
+                    tooltip: l10n.comment,
+                  ),
+                ),
                 // Answer button - secondary style
                 TextButton(
                   onPressed: _isSending ? null : () => _sendMessageWithType(currentUser, MessageType.answer),
@@ -592,18 +610,6 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                     l10n.answerLabel,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                ),
-                // Comment button (send icon) - primary style
-                IconButton(
-                  onPressed: _isSending ? null : () => _sendMessageWithType(currentUser, MessageType.comment),
-                  icon: _isSending
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send, color: QoomyTheme.primaryColor),
-                  tooltip: l10n.comment,
                 ),
               ],
             ),

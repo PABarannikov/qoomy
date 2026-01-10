@@ -973,6 +973,24 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Comment button (send icon) - circled style
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: QoomyTheme.primaryColor.withOpacity(0.1),
+                  ),
+                  child: IconButton(
+                    onPressed: _isSending ? null : () => _sendPlayerMessageWithType(currentUser, MessageType.comment),
+                    icon: _isSending
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send, color: QoomyTheme.primaryColor),
+                    tooltip: l10n.comment,
+                  ),
+                ),
                 // Answer button (only if user can still answer) - secondary style
                 if (!cannotAnswer)
                   TextButton(
@@ -986,18 +1004,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                // Comment button (send icon) - primary style
-                IconButton(
-                  onPressed: _isSending ? null : () => _sendPlayerMessageWithType(currentUser, MessageType.comment),
-                  icon: _isSending
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send, color: QoomyTheme.primaryColor),
-                  tooltip: l10n.comment,
-                ),
               ],
             ),
           ),
