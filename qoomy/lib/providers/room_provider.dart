@@ -28,6 +28,11 @@ final userJoinedRoomsProvider = StreamProvider.family<List<RoomModel>, String>((
   return ref.watch(roomServiceProvider).userJoinedRoomsStream(userId);
 });
 
+/// Provider for unread message count of a specific room
+final unreadCountProvider = StreamProvider.family<int, ({String roomCode, String userId})>((ref, params) {
+  return ref.watch(roomServiceProvider).unreadCountStream(params.roomCode, params.userId);
+});
+
 class RoomNotifier extends StateNotifier<AsyncValue<String?>> {
   final RoomService _roomService;
 

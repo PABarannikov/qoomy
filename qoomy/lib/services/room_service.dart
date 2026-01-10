@@ -333,4 +333,78 @@ class RoomService {
       return rooms;
     });
   }
+
+  /// Update user's last read timestamp for a room
+  Future<void> updateLastRead(String roomCode, String userId) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('roomReads')
+        .doc(roomCode)
+        .set({
+      'lastReadAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Get user's last read timestamp for a room
+  Future<DateTime?> getLastRead(String roomCode, String userId) async {
+    final doc = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('roomReads')
+        .doc(roomCode)
+        .get();
+
+    if (!doc.exists) return null;
+    final data = doc.data();
+    if (data == null) return null;
+    return (data['lastReadAt'] as Timestamp?)?.toDate();
+  }
+
+  /// Stream of unread message count for a specific room and user
+  Stream<int> unreadCountStream(String roomCode, String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('roomReads')
+        .doc(roomCode)
+        .snapshots()
+        .asyncMap((readDoc) async {
+      DateTime? lastReadAt;
+      if (readDoc.exists && readDoc.data() != null) {
+        lastReadAt = (readDoc.data()!['lastReadAt'] as Timestamp?)?.toDate();
+      }
+
+      // Count messages after lastReadAt (or all if never read)
+      Query query = _roomsCollection.doc(roomCode).collection('chat');
+      if (lastReadAt != null) {
+        query = query.where('sentAt', isGreaterThan: Timestamp.fromDate(lastReadAt));
+      }
+
+      final snapshot = await query.count().get();
+      return snapshot.count ?? 0;
+    });
+  }
+
+  /// Get unread counts for multiple rooms at once
+  Future<Map<String, int>> getUnreadCountsForRooms(
+    List<String> roomCodes,
+    String userId,
+  ) async {
+    final counts = <String, int>{};
+
+    for (final roomCode in roomCodes) {
+      final lastReadAt = await getLastRead(roomCode, userId);
+
+      Query query = _roomsCollection.doc(roomCode).collection('chat');
+      if (lastReadAt != null) {
+        query = query.where('sentAt', isGreaterThan: Timestamp.fromDate(lastReadAt));
+      }
+
+      final snapshot = await query.count().get();
+      counts[roomCode] = snapshot.count ?? 0;
+    }
+
+    return counts;
+  }
 }

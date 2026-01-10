@@ -188,11 +188,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             allRooms = allRooms.where((e) => e.key.status != RoomStatus.finished).toList();
           }
 
-          // Apply unread filter (TODO: implement actual unread tracking)
-          // For now, unread filter shows rooms with status playing or waiting
-          if (_unreadFilter == UnreadFilter.unread) {
-            allRooms = allRooms.where((e) => e.key.status == RoomStatus.playing).toList();
-          }
+          // Note: Unread filter is applied in the UI by checking unreadCountProvider for each room
+          // The filter just hides rooms with 0 unread count when enabled
 
           allRooms.sort((a, b) => b.key.createdAt.compareTo(a.key.createdAt));
 
@@ -215,6 +212,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               children: [
                 ...allRooms.map((entry) => _buildRoomCard(
                   context,
+                  ref,
                   entry.key,
                   isHost: entry.value,
                   userId: userId,
@@ -234,6 +232,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildRoomCard(
     BuildContext context,
+    WidgetRef ref,
     RoomModel room, {
     required bool isHost,
     required String userId,
@@ -241,6 +240,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final l10n = AppLocalizations.of(context);
     final statusColor = _getStatusColor(room.status);
     final statusText = _getStatusText(room.status, l10n);
+    final unreadCountAsync = ref.watch(unreadCountProvider((roomCode: room.code, userId: userId)));
+
+    // Apply unread filter: hide rooms with 0 unread when filter is active
+    if (_unreadFilter == UnreadFilter.unread) {
+      final unreadCount = unreadCountAsync.valueOrNull ?? 0;
+      if (unreadCount == 0) {
+        return const SizedBox.shrink();
+      }
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -304,6 +312,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                   const Spacer(),
+                  // Unread badge
+                  unreadCountAsync.when(
+                    data: (count) => count > 0
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: QoomyTheme.secondaryColor,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              count > 99 ? '99+' : count.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
                   // Role badge
                   if (isHost)
                     Container(

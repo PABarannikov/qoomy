@@ -31,6 +31,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Mark room as read when entering
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _markAsRead();
+    });
+  }
+
+  void _markAsRead() {
+    final currentUser = ref.read(currentUserProvider).valueOrNull;
+    if (currentUser != null) {
+      ref.read(roomServiceProvider).updateLastRead(widget.roomCode, currentUser.id);
+    }
   }
 
   @override
@@ -79,9 +90,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       });
     });
 
-    // Auto-scroll when new messages arrive
+    // Auto-scroll when new messages arrive and mark as read
     ref.listen(chatProvider(widget.roomCode), (previous, next) {
       _scrollToBottom();
+      _markAsRead();
     });
 
     final l10n = AppLocalizations.of(context);
