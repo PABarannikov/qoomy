@@ -311,6 +311,14 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                     color: message.isCorrect! ? QoomyTheme.successColor : QoomyTheme.errorColor,
                   ),
                 ],
+                const Spacer(),
+                Text(
+                  _formatMessageTime(message.sentAt, l10n),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -565,7 +573,19 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Comment button (arrow icon)
+                // Answer button - secondary style
+                TextButton(
+                  onPressed: _isSending ? null : () => _sendMessageWithType(currentUser, MessageType.answer),
+                  style: TextButton.styleFrom(
+                    foregroundColor: QoomyTheme.primaryColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child: Text(
+                    l10n.answerLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                // Comment button (send icon) - primary style
                 IconButton(
                   onPressed: _isSending ? null : () => _sendMessageWithType(currentUser, MessageType.comment),
                   icon: _isSending
@@ -574,24 +594,8 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                           height: 24,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.send, color: Colors.grey),
+                      : const Icon(Icons.send, color: QoomyTheme.primaryColor),
                   tooltip: l10n.comment,
-                ),
-                // Answer button
-                ElevatedButton(
-                  onPressed: _isSending ? null : () => _sendMessageWithType(currentUser, MessageType.answer),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: QoomyTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  child: Text(
-                    l10n.answerLabel,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
                 ),
               ],
             ),
@@ -599,6 +603,26 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
         ],
       ),
     );
+  }
+
+  String _formatMessageTime(DateTime time, AppLocalizations l10n) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDate = DateTime(time.year, time.month, time.day);
+
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    final timeStr = '$hour:$minute';
+
+    if (messageDate == today) {
+      return timeStr;
+    } else if (messageDate == today.subtract(const Duration(days: 1))) {
+      return '${l10n.yesterday} $timeStr';
+    } else {
+      final day = time.day.toString().padLeft(2, '0');
+      final month = time.month.toString().padLeft(2, '0');
+      return '$day.$month $timeStr';
+    }
   }
 
   Future<void> _sendMessageWithType(dynamic currentUser, MessageType type) async {

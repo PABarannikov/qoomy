@@ -72,6 +72,7 @@ class AppLocalizations {
       'minutesAgo': 'm ago',
       'hoursAgo': 'h ago',
       'daysAgo': 'd ago',
+      'yesterday': 'Yesterday',
 
       // Create room
       'createNewRoom': 'Create New Room',
@@ -268,6 +269,7 @@ class AppLocalizations {
       'minutesAgo': ' мин назад',
       'hoursAgo': ' ч назад',
       'daysAgo': ' д назад',
+      'yesterday': 'Вчера',
 
       // Create room
       'createNewRoom': 'Новая комната',
@@ -459,6 +461,7 @@ class AppLocalizations {
   String get minutesAgo => get('minutesAgo');
   String get hoursAgo => get('hoursAgo');
   String get daysAgo => get('daysAgo');
+  String get yesterday => get('yesterday');
   String get createNewRoom => get('createNewRoom');
   String get question => get('question');
   String get questionHint => get('questionHint');
