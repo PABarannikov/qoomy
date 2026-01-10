@@ -981,27 +981,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Comment button (send icon) - circled style
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: QoomyTheme.primaryColor.withOpacity(0.1),
-                  ),
-                  child: IconButton(
-                    onPressed: _isSending ? null : () => _sendPlayerMessageWithType(currentUser, MessageType.comment),
-                    icon: _isSending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send, color: QoomyTheme.primaryColor, size: 20),
-                    tooltip: l10n.comment,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
+                // Comment button (send icon)
+                IconButton(
+                  onPressed: _isSending ? null : () => _sendPlayerMessageWithType(currentUser, MessageType.comment),
+                  icon: _isSending
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send, color: QoomyTheme.primaryColor, size: 28, weight: 700),
+                  tooltip: l10n.comment,
                 ),
               ],
             ),
