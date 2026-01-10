@@ -518,8 +518,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 ),
               ),
 
-              // AI reasoning (shown after AI marks the answer - only for correct answers to players, all to host)
-              if (isAiMode && isAnswer && isMarked && message.aiReasoning != null && (isHost || message.isCorrect == true)) ...[
+              // AI reasoning (shown after AI marks the answer - only for correct answers)
+              if (isAiMode && isAnswer && isMarked && message.aiReasoning != null && message.isCorrect == true) ...[
                 const SizedBox(height: 6),
                 _buildAiReasoningBadge(message),
               ],
