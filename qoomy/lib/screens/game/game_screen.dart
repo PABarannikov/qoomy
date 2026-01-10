@@ -24,7 +24,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
   bool _isSending = false;
-  MessageType _selectedType = MessageType.answer;
   ChatMessage? _replyingTo; // Message being replied to
 
   @override
@@ -927,13 +926,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Widget _buildPlayerMessageInput(dynamic currentUser, AppLocalizations l10n, {bool cannotAnswer = false}) {
-    // If player cannot answer (has correct answer or revealed), force comment mode
-    if (cannotAnswer && _selectedType == MessageType.answer) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _selectedType = MessageType.comment);
-      });
-    }
-
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -945,122 +937,55 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           _buildReplyBar(l10n),
           Padding(
             padding: const EdgeInsets.all(12),
-            child: Column(
+            child: Row(
               children: [
-                // Type selector (Answer / Comment) - Answer disabled for winners and revealers
-                if (cannotAnswer)
-                  // Winner can only send comments
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade600,
-                      borderRadius: BorderRadius.circular(8),
+                // Text input
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: l10n.typeMessage,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                    enabled: !_isSending,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Comment button (arrow icon)
+                IconButton(
+                  onPressed: _isSending ? null : () => _sendPlayerMessageWithType(currentUser, MessageType.comment),
+                  icon: _isSending
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send, color: Colors.grey),
+                  tooltip: l10n.comment,
+                ),
+                // Answer button (only if user can still answer)
+                if (!cannotAnswer)
+                  ElevatedButton(
+                    onPressed: _isSending ? null : () => _sendPlayerMessageWithType(currentUser, MessageType.answer),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: QoomyTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
                     ),
                     child: Text(
-                      l10n.comment,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
+                      l10n.answerLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  )
-                else
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedType = MessageType.answer),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: BoxDecoration(
-                              color: _selectedType == MessageType.answer
-                                  ? QoomyTheme.primaryColor
-                                  : Colors.grey.shade200,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(8),
-                                bottomLeft: Radius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              l10n.answerLabel,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: _selectedType == MessageType.answer ? Colors.white : Colors.grey.shade700,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedType = MessageType.comment),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: BoxDecoration(
-                              color: _selectedType == MessageType.comment
-                                  ? Colors.grey.shade600
-                                  : Colors.grey.shade200,
-                              borderRadius: const BorderRadius.only(
-                                topRight: Radius.circular(8),
-                                bottomRight: Radius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              l10n.comment,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: _selectedType == MessageType.comment ? Colors.white : Colors.grey.shade700,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
-                const SizedBox(height: 8),
-
-                // Text input and send button
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          hintText: _selectedType == MessageType.answer
-                              ? l10n.typeAnswer
-                              : l10n.typeComment,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        ),
-                        enabled: !_isSending,
-                        onSubmitted: (_) => _sendPlayerMessage(currentUser),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: _isSending ? null : () => _sendPlayerMessage(currentUser),
-                      icon: _isSending
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.send, color: QoomyTheme.primaryColor),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -1099,7 +1024,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
   }
 
-  Future<void> _sendPlayerMessage(dynamic currentUser) async {
+  Future<void> _sendPlayerMessageWithType(dynamic currentUser, MessageType type) async {
     if (_messageController.text.trim().isEmpty || currentUser == null) return;
 
     setState(() => _isSending = true);
@@ -1114,7 +1039,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           playerId: currentUser.id,
           playerName: currentUser.displayName,
           text: _messageController.text.trim(),
-          type: _selectedType,
+          type: type,
           replyToId: replyToId,
           replyToText: replyToText,
           replyToPlayerName: replyToPlayerName,

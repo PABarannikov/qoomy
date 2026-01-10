@@ -108,6 +108,7 @@ class AppLocalizations {
       'sendAnswerOrComment': 'Send an answer or comment below',
       'typeAnswer': 'Type your answer...',
       'typeComment': 'Type a comment...',
+      'typeMessage': 'Type a message...',
       'answerLabel': 'Answer',
       'comment': 'Comment',
       'aiEvaluating': 'AI is evaluating...',
@@ -303,6 +304,7 @@ class AppLocalizations {
       'sendAnswerOrComment': 'Отправьте ответ или комментарий',
       'typeAnswer': 'Введите ответ...',
       'typeComment': 'Введите комментарий...',
+      'typeMessage': 'Введите сообщение...',
       'answerLabel': 'Ответ',
       'comment': 'Комментарий',
       'aiEvaluating': 'AI оценивает...',
@@ -487,6 +489,7 @@ class AppLocalizations {
   String get sendAnswerOrComment => get('sendAnswerOrComment');
   String get typeAnswer => get('typeAnswer');
   String get typeComment => get('typeComment');
+  String get typeMessage => get('typeMessage');
   String get answerLabel => get('answerLabel');
   String get comment => get('comment');
   String get aiEvaluating => get('aiEvaluating');
