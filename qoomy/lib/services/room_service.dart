@@ -459,4 +459,27 @@ class RoomService {
 
     return counts;
   }
+
+  /// Mark that a user has revealed the correct answer for a room
+  Future<void> revealAnswer(String roomCode, String userId) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('roomReveals')
+        .doc(roomCode)
+        .set({
+      'revealedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Stream to check if user has revealed the correct answer for a room
+  Stream<bool> hasRevealedAnswerStream(String roomCode, String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('roomReveals')
+        .doc(roomCode)
+        .snapshots()
+        .map((doc) => doc.exists);
+  }
 }

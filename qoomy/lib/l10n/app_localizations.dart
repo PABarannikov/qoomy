@@ -118,6 +118,11 @@ class AppLocalizations {
       'answerHiddenUntilEvaluated': 'Answer will be revealed after evaluation',
       'tapToRevealCorrectAnswer': 'Tap to reveal the correct answer',
       'youGotItRight': 'You got it right!',
+      'revealAnswerTitle': 'Reveal Answer?',
+      'revealAnswerWarning': 'If you reveal the correct answer, you will no longer be able to submit your own answer.',
+      'reveal': 'Reveal',
+      'cancel': 'Cancel',
+      'youRevealedAnswer': 'You revealed the answer',
 
       // Host screen
       'accessCode': 'Access Code',
@@ -305,6 +310,11 @@ class AppLocalizations {
       'answerHiddenUntilEvaluated': 'Ответ будет показан после проверки',
       'tapToRevealCorrectAnswer': 'Нажмите чтобы увидеть правильный ответ',
       'youGotItRight': 'Вы ответили правильно!',
+      'revealAnswerTitle': 'Показать ответ?',
+      'revealAnswerWarning': 'Если вы откроете правильный ответ, вы больше не сможете отправить свой ответ.',
+      'reveal': 'Показать',
+      'cancel': 'Отмена',
+      'youRevealedAnswer': 'Вы открыли ответ',
 
       // Host screen
       'accessCode': 'Код доступа',
@@ -481,6 +491,11 @@ class AppLocalizations {
   String get answerHiddenUntilEvaluated => get('answerHiddenUntilEvaluated');
   String get tapToRevealCorrectAnswer => get('tapToRevealCorrectAnswer');
   String get youGotItRight => get('youGotItRight');
+  String get revealAnswerTitle => get('revealAnswerTitle');
+  String get revealAnswerWarning => get('revealAnswerWarning');
+  String get reveal => get('reveal');
+  String get cancel => get('cancel');
+  String get youRevealedAnswer => get('youRevealedAnswer');
   String get accessCode => get('accessCode');
   String get hostPanel => get('hostPanel');
   String get players => get('players');

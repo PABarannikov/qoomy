@@ -138,6 +138,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           msg.isCorrect == true),
     ) ?? false;
 
+    // Check if current player has revealed the answer (without answering correctly)
+    final hasRevealedAnswer = currentUser != null
+        ? ref.watch(hasRevealedAnswerProvider((roomCode: widget.roomCode, userId: currentUser.id))).valueOrNull ?? false
+        : false;
+
+    // Combined: user can see answer if they got it right OR revealed it
+    final canSeeAnswer = hasCorrectAnswer || hasRevealedAnswer;
+
     return Column(
       children: [
         // Header with back button, access code, and profile menu
@@ -152,9 +160,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             children: [
               _buildQuestionCard(room, isHost, l10n),
               if (isHost)
-                _buildAnswerSection(room, l10n, isHost: true)
-              else if (hasCorrectAnswer)
-                _buildAnswerSection(room, l10n, isHost: false),
+                _buildAnswerSection(room, l10n, isHost: true, hasRevealed: false)
+              else if (canSeeAnswer)
+                _buildAnswerSection(room, l10n, isHost: false, hasRevealed: hasRevealedAnswer && !hasCorrectAnswer),
             ],
           ),
         ),
@@ -169,6 +177,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               currentUser?.id,
               isHost,
               l10n,
+              canSeeAnswer: canSeeAnswer,
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
@@ -179,7 +188,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         if (isHost)
           _buildHostMessageInput(room, l10n)
         else
-          _buildPlayerMessageInput(currentUser, l10n, hasCorrectAnswer: hasCorrectAnswer),
+          _buildPlayerMessageInput(currentUser, l10n, cannotAnswer: canSeeAnswer),
       ],
     );
   }
@@ -320,7 +329,26 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  Widget _buildAnswerSection(RoomModel room, AppLocalizations l10n, {required bool isHost}) {
+  Widget _buildAnswerSection(RoomModel room, AppLocalizations l10n, {required bool isHost, bool hasRevealed = false}) {
+    // Determine the header text and icon based on who is viewing
+    final String headerText;
+    final IconData headerIcon;
+    final Color headerColor;
+
+    if (isHost) {
+      headerText = l10n.correctAnswer;
+      headerIcon = Icons.check_circle;
+      headerColor = QoomyTheme.successColor;
+    } else if (hasRevealed) {
+      headerText = l10n.youRevealedAnswer;
+      headerIcon = Icons.visibility;
+      headerColor = Colors.orange;
+    } else {
+      headerText = l10n.youGotItRight;
+      headerIcon = Icons.emoji_events;
+      headerColor = Colors.amber;
+    }
+
     // Hide when question is collapsed
     return AnimatedSize(
       duration: const Duration(milliseconds: 200),
@@ -329,7 +357,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           : Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Card(
-                color: QoomyTheme.successColor.withOpacity(0.1),
+                color: headerColor.withOpacity(0.1),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
@@ -338,15 +366,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       Row(
                         children: [
                           Icon(
-                            isHost ? Icons.check_circle : Icons.emoji_events,
-                            color: isHost ? QoomyTheme.successColor : Colors.amber,
+                            headerIcon,
+                            color: headerColor,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            isHost ? l10n.correctAnswer : l10n.youGotItRight,
+                            headerText,
                             style: TextStyle(
-                              color: isHost ? QoomyTheme.successColor : Colors.amber.shade700,
+                              color: isHost ? QoomyTheme.successColor : (hasRevealed ? Colors.orange.shade700 : Colors.amber.shade700),
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
@@ -388,8 +416,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     String hostId,
     String? currentUserId,
     bool isHost,
-    AppLocalizations l10n,
-  ) {
+    AppLocalizations l10n, {
+    bool canSeeAnswer = false,
+  }) {
     if (messages.isEmpty) {
       return Center(
         child: Column(
@@ -418,21 +447,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       itemBuilder: (context, index) {
         final message = messages[index];
         final isMe = isHost ? message.playerId == hostId : message.playerId == currentUserId;
-        return _buildMessageBubble(message, isMe: isMe, isAiMode: isAiMode, isHost: isHost, currentUserId: currentUserId, l10n: l10n);
+        return _buildMessageBubble(message, isMe: isMe, isAiMode: isAiMode, isHost: isHost, currentUserId: currentUserId, l10n: l10n, canSeeAnswer: canSeeAnswer);
       },
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message, {bool isMe = false, bool isAiMode = false, bool isHost = false, String? currentUserId, required AppLocalizations l10n}) {
+  Widget _buildMessageBubble(ChatMessage message, {bool isMe = false, bool isAiMode = false, bool isHost = false, String? currentUserId, required AppLocalizations l10n, bool canSeeAnswer = false}) {
     final isAnswer = message.type == MessageType.answer;
     final isMarked = message.isCorrect != null;
 
     // Determine if the answer should be hidden (applies to both AI and manual mode)
     // Hidden if: answer type + (not evaluated yet OR correct)
-    // Visible to: host, or the player who sent the answer
+    // Visible to: host, the player who sent the answer, OR users who revealed the answer
     // Wrong answers are revealed to everyone after marking
     final bool shouldHideAnswer = isAnswer &&
         !isHost &&
+        !canSeeAnswer &&
         message.playerId != currentUserId &&
         (message.isCorrect == null || message.isCorrect == true);
 
@@ -520,7 +550,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   children: [
                     if (shouldHideAnswer) ...[
                       // Hidden answer display - different text for pending vs correct
-                      _buildHiddenAnswerContent(message.isCorrect == true, l10n),
+                      // Tappable only for correct answers (to reveal)
+                      if (message.isCorrect == true)
+                        GestureDetector(
+                          onTap: () => _showRevealConfirmation(l10n),
+                          child: _buildHiddenAnswerContent(true, l10n),
+                        )
+                      else
+                        _buildHiddenAnswerContent(false, l10n),
                     ] else ...[
                       Text(message.text, style: const TextStyle(fontSize: 15)),
                       // Player-specific: Result indicator after marked
@@ -741,9 +778,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  Widget _buildPlayerMessageInput(dynamic currentUser, AppLocalizations l10n, {bool hasCorrectAnswer = false}) {
-    // If player has correct answer, force comment mode
-    if (hasCorrectAnswer && _selectedType == MessageType.answer) {
+  Widget _buildPlayerMessageInput(dynamic currentUser, AppLocalizations l10n, {bool cannotAnswer = false}) {
+    // If player cannot answer (has correct answer or revealed), force comment mode
+    if (cannotAnswer && _selectedType == MessageType.answer) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _selectedType = MessageType.comment);
       });
@@ -757,8 +794,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       ),
       child: Column(
         children: [
-          // Type selector (Answer / Comment) - Answer disabled for winners
-          if (hasCorrectAnswer)
+          // Type selector (Answer / Comment) - Answer disabled for winners and revealers
+          if (cannotAnswer)
             // Winner can only send comments
             Container(
               width: double.infinity,
@@ -920,6 +957,37 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           messageId: messageId,
           isCorrect: isCorrect,
         );
+  }
+
+  Future<void> _showRevealConfirmation(AppLocalizations l10n) async {
+    final currentUser = ref.read(currentUserProvider).valueOrNull;
+    if (currentUser == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.revealAnswerTitle),
+        content: Text(l10n.revealAnswerWarning),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: Text(l10n.reveal),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(roomNotifierProvider.notifier).revealAnswer(
+        roomCode: widget.roomCode,
+        userId: currentUser.id,
+      );
+    }
   }
 
   Future<void> _endGame() async {

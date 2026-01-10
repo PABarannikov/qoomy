@@ -38,6 +38,11 @@ final hasCorrectAnswerProvider = StreamProvider.family<bool, String>((ref, roomC
   return ref.watch(roomServiceProvider).hasCorrectAnswerStream(roomCode);
 });
 
+/// Provider to check if user has revealed the correct answer for a room
+final hasRevealedAnswerProvider = StreamProvider.family<bool, ({String roomCode, String userId})>((ref, params) {
+  return ref.watch(roomServiceProvider).hasRevealedAnswerStream(params.roomCode, params.userId);
+});
+
 class RoomNotifier extends StateNotifier<AsyncValue<String?>> {
   final RoomService _roomService;
 
@@ -144,6 +149,13 @@ class RoomNotifier extends StateNotifier<AsyncValue<String?>> {
       messageId: messageId,
       isCorrect: isCorrect,
     );
+  }
+
+  Future<void> revealAnswer({
+    required String roomCode,
+    required String userId,
+  }) async {
+    await _roomService.revealAnswer(roomCode, userId);
   }
 
   void reset() {
