@@ -80,7 +80,7 @@ class TeamDetailsScreen extends ConsumerWidget {
                     backgroundColor: QoomyTheme.primaryColor.withOpacity(0.1),
                     child: Text(
                       team.name.isNotEmpty ? team.name[0].toUpperCase() : '?',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: QoomyTheme.primaryColor,
@@ -119,11 +119,11 @@ class TeamDetailsScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.link, color: QoomyTheme.primaryColor, size: 20),
+                      const Icon(Icons.link, color: QoomyTheme.primaryColor, size: 20),
                       const SizedBox(width: 8),
                       Text(
                         l10n.inviteCode,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: QoomyTheme.primaryColor,
                         ),
@@ -194,11 +194,11 @@ class TeamDetailsScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.people, color: QoomyTheme.primaryColor, size: 20),
+                      const Icon(Icons.people, color: QoomyTheme.primaryColor, size: 20),
                       const SizedBox(width: 8),
                       Text(
                         l10n.members,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: QoomyTheme.primaryColor,
                         ),
@@ -214,7 +214,7 @@ class TeamDetailsScreen extends ConsumerWidget {
                       if (isOwner) ...[
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: Icon(Icons.person_add, color: QoomyTheme.primaryColor, size: 20),
+                          icon: const Icon(Icons.person_add, color: QoomyTheme.primaryColor, size: 20),
                           onPressed: () => _showAddMemberDialog(context, ref, team, userId, l10n),
                           tooltip: l10n.addMember,
                         ),
@@ -245,7 +245,7 @@ class TeamDetailsScreen extends ConsumerWidget {
               label: Text(l10n.deleteTeam),
               style: OutlinedButton.styleFrom(
                 foregroundColor: QoomyTheme.errorColor,
-                side: BorderSide(color: QoomyTheme.errorColor),
+                side: const BorderSide(color: QoomyTheme.errorColor),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             )
@@ -256,7 +256,7 @@ class TeamDetailsScreen extends ConsumerWidget {
               label: Text(l10n.leaveTeam),
               style: OutlinedButton.styleFrom(
                 foregroundColor: QoomyTheme.errorColor,
-                side: BorderSide(color: QoomyTheme.errorColor),
+                side: const BorderSide(color: QoomyTheme.errorColor),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
@@ -346,7 +346,7 @@ class TeamDetailsScreen extends ConsumerWidget {
             )
           else if (isOwner && !isCurrentUser)
             IconButton(
-              icon: Icon(Icons.remove_circle_outline, color: QoomyTheme.errorColor, size: 20),
+              icon: const Icon(Icons.remove_circle_outline, color: QoomyTheme.errorColor, size: 20),
               onPressed: () => _showRemoveMemberConfirmation(
                 context,
                 ref,
@@ -616,7 +616,7 @@ class _AddMemberDialogState extends ConsumerState<_AddMemberDialog> {
                           user.displayName.isNotEmpty
                               ? user.displayName[0].toUpperCase()
                               : '?',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: QoomyTheme.primaryColor,
                           ),
@@ -634,7 +634,7 @@ class _AddMemberDialogState extends ConsumerState<_AddMemberDialog> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : IconButton(
-                              icon: Icon(Icons.add_circle, color: QoomyTheme.primaryColor),
+                              icon: const Icon(Icons.add_circle, color: QoomyTheme.primaryColor),
                               onPressed: () => _addMember(user),
                             ),
                     );

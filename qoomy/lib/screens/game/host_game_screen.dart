@@ -170,9 +170,9 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
           ),
           child: Row(
             children: [
-              Icon(Icons.chat, size: 20, color: QoomyTheme.primaryColor),
+              const Icon(Icons.chat, size: 20, color: QoomyTheme.primaryColor),
               const SizedBox(width: 8),
-              Text(
+              const Text(
                 'Chat',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
@@ -258,7 +258,7 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
                     height: 24,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Icon(Icons.send, color: QoomyTheme.primaryColor),
+                : const Icon(Icons.send, color: QoomyTheme.primaryColor),
           ),
         ],
       ),
@@ -292,10 +292,10 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
                 Icon(Icons.quiz, color: QoomyTheme.primaryColor, size: 20),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Text(
                   'Question',
                   style: TextStyle(
@@ -345,10 +345,10 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
+                const Row(
                   children: [
                     Icon(Icons.check_circle, color: QoomyTheme.successColor, size: 20),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text(
                       'Correct Answer',
                       style: TextStyle(
@@ -452,7 +452,7 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
                     backgroundColor: QoomyTheme.primaryColor.withOpacity(0.2),
                     child: Text(
                       message.playerName.isNotEmpty ? message.playerName[0].toUpperCase() : '?',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: QoomyTheme.primaryColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
@@ -517,7 +517,7 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
                     label: const Text('Wrong'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: QoomyTheme.errorColor,
-                      side: BorderSide(color: QoomyTheme.errorColor),
+                      side: const BorderSide(color: QoomyTheme.errorColor),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     ),
                   ),

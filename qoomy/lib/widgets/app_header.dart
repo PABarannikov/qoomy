@@ -111,7 +111,7 @@ class AppHeader extends ConsumerWidget {
                                   user.displayName.isNotEmpty
                                       ? user.displayName[0].toUpperCase()
                                       : '?',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: QoomyTheme.primaryColor,

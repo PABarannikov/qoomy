@@ -153,7 +153,7 @@ class GameService {
 
   int calculatePoints(DateTime questionAskedAt, DateTime answeredAt, int maxPoints) {
     final elapsed = answeredAt.difference(questionAskedAt).inMilliseconds;
-    final maxTime = 30000;
+    const maxTime = 30000;
     
     if (elapsed >= maxTime) return maxPoints ~/ 4;
     

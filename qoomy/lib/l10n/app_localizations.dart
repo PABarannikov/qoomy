@@ -123,6 +123,9 @@ class AppLocalizations {
       'reveal': 'Reveal',
       'cancel': 'Cancel',
       'youRevealedAnswer': 'You revealed the answer',
+      'replyingTo': 'Replying to',
+      'reply': 'Reply',
+      'longPressToReply': 'Long press a message to reply',
 
       // Host screen
       'accessCode': 'Access Code',
@@ -315,6 +318,9 @@ class AppLocalizations {
       'reveal': 'Показать',
       'cancel': 'Отмена',
       'youRevealedAnswer': 'Вы открыли ответ',
+      'replyingTo': 'Ответ на',
+      'reply': 'Ответить',
+      'longPressToReply': 'Долгое нажатие для ответа на сообщение',
 
       // Host screen
       'accessCode': 'Код доступа',
@@ -496,6 +502,9 @@ class AppLocalizations {
   String get reveal => get('reveal');
   String get cancel => get('cancel');
   String get youRevealedAnswer => get('youRevealedAnswer');
+  String get replyingTo => get('replyingTo');
+  String get reply => get('reply');
+  String get longPressToReply => get('longPressToReply');
   String get accessCode => get('accessCode');
   String get hostPanel => get('hostPanel');
   String get players => get('players');

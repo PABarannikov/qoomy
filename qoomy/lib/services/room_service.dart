@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -36,7 +37,7 @@ class RoomService {
 
       return await ref.getDownloadURL();
     } catch (e) {
-      print('Error uploading image: $e');
+      developer.log('Error uploading image: $e', name: 'RoomService');
       return null;
     }
   }
@@ -120,7 +121,7 @@ class RoomService {
 
       await batch.commit();
     } catch (e) {
-      print('Error auto-joining team members: $e');
+      developer.log('Error auto-joining team members: $e', name: 'RoomService');
     }
   }
 
@@ -271,6 +272,9 @@ class RoomService {
     required String playerName,
     required String text,
     required MessageType type,
+    String? replyToId,
+    String? replyToText,
+    String? replyToPlayerName,
   }) async {
     final message = ChatMessage(
       id: '',
@@ -279,6 +283,9 @@ class RoomService {
       text: text,
       type: type,
       sentAt: DateTime.now(),
+      replyToId: replyToId,
+      replyToText: replyToText,
+      replyToPlayerName: replyToPlayerName,
     );
 
     await _roomsCollection

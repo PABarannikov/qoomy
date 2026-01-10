@@ -42,6 +42,10 @@ dependencies:
   # Firebase Storage
   firebase_storage: ^12.3.7
 
+  # Web plugins
+  flutter_web_plugins:
+    sdk: flutter
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

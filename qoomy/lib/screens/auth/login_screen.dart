@@ -69,7 +69,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           IconButton(
             icon: Text(
               ref.watch(localeProvider).languageCode.toUpperCase(),
-              style: TextStyle(
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
                 color: QoomyTheme.primaryColor,

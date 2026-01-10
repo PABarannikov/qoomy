@@ -129,6 +129,9 @@ class RoomNotifier extends StateNotifier<AsyncValue<String?>> {
     required String playerName,
     required String text,
     required MessageType type,
+    String? replyToId,
+    String? replyToText,
+    String? replyToPlayerName,
   }) async {
     await _roomService.sendMessage(
       roomCode: roomCode,
@@ -136,6 +139,9 @@ class RoomNotifier extends StateNotifier<AsyncValue<String?>> {
       playerName: playerName,
       text: text,
       type: type,
+      replyToId: replyToId,
+      replyToText: replyToText,
+      replyToPlayerName: replyToPlayerName,
     );
   }
 

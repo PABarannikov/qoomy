@@ -46,8 +46,8 @@ class _CreateTeamScreenState extends ConsumerState<CreateTeamScreen> {
       context.go('/teams/$teamId');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Failed to create team'),
+        const SnackBar(
+          content: Text('Failed to create team'),
           backgroundColor: QoomyTheme.errorColor,
         ),
       );

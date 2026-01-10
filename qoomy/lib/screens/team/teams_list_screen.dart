@@ -169,7 +169,7 @@ class TeamsListScreen extends ConsumerWidget {
                 backgroundColor: QoomyTheme.primaryColor.withOpacity(0.1),
                 child: Text(
                   team.name.isNotEmpty ? team.name[0].toUpperCase() : '?',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: QoomyTheme.primaryColor,

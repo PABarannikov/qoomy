@@ -44,8 +44,8 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
         context.go('/lobby/${_roomCodeController.text.trim().toUpperCase()}');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Failed to join room. Check the code and try again.'),
+          const SnackBar(
+            content: Text('Failed to join room. Check the code and try again.'),
             backgroundColor: QoomyTheme.errorColor,
           ),
         );
@@ -75,7 +75,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.meeting_room_outlined,
                       size: 80,
                       color: QoomyTheme.primaryColor,

@@ -372,7 +372,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
               ),
             ),
             if (isSelected)
-              Icon(
+              const Icon(
                 Icons.check_circle,
                 color: QoomyTheme.primaryColor,
               ),
@@ -459,7 +459,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                     ? Icon(Icons.group_off, color: Colors.grey.shade600)
                     : Text(
                         team.name.isNotEmpty ? team.name[0].toUpperCase() : '?',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: QoomyTheme.primaryColor,
                         ),
@@ -493,7 +493,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                 ),
               ),
               if (isSelected)
-                Icon(
+                const Icon(
                   Icons.check_circle,
                   color: QoomyTheme.primaryColor,
                 ),

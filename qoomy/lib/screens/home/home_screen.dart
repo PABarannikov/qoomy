@@ -37,7 +37,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Column(
               children: [
                 // Shared header with Qoomy title
-                AppHeader(
+                const AppHeader(
                   showBackButton: false,
                   titleWidget: Text(
                     'Qoomy',
@@ -413,7 +413,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Icon(Icons.access_time, size: 14, color: Colors.grey),
+                  const Icon(Icons.access_time, size: 14, color: Colors.grey),
                   const SizedBox(width: 4),
                   Text(
                     _formatDate(room.createdAt, l10n),

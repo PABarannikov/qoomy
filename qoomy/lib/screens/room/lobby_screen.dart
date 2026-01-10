@@ -163,7 +163,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                       playersAsync.when(
                         data: (players) => Text(
                           '${players.length}/ joined',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: QoomyTheme.primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
@@ -311,7 +311,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                       onPressed: () => _handleLeave(currentUser?.id),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: QoomyTheme.errorColor,
-                        side: BorderSide(color: QoomyTheme.errorColor),
+                        side: const BorderSide(color: QoomyTheme.errorColor),
                       ),
                       child: const Text('Leave Room'),
                     ),

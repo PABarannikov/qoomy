@@ -132,7 +132,7 @@ class ResultsScreen extends ConsumerWidget {
                                     ),
                                     child: Text(
                                       '${player.score} pts',
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         color: QoomyTheme.primaryColor,
                                         fontWeight: FontWeight.bold,
                                       ),
