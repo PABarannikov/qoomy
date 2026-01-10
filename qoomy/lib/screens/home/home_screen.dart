@@ -157,70 +157,90 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildRoomsList(BuildContext context, WidgetRef ref, String userId) {
     final hostedRoomsAsync = ref.watch(userHostedRoomsProvider(userId));
     final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider(userId));
+    final teamRoomsAsync = ref.watch(userTeamRoomsProvider(userId));
 
     return hostedRoomsAsync.when(
       data: (hostedRooms) => joinedRoomsAsync.when(
-        data: (joinedRooms) {
-          // Filter out rooms where user is host from joined rooms
-          final playerRooms = joinedRooms
-              .where((r) => r.hostId != userId)
-              .toList();
+        data: (joinedRooms) => teamRoomsAsync.when(
+          data: (teamRooms) {
+            // Create sets of room codes for deduplication
+            final hostedCodes = hostedRooms.map((r) => r.code).toSet();
+            final joinedCodes = joinedRooms.map((r) => r.code).toSet();
 
-          // Combine all rooms and sort by creation time (newest first)
-          var allRooms = <MapEntry<RoomModel, bool>>[];
-          for (final room in hostedRooms) {
-            allRooms.add(MapEntry(room, true)); // isHost = true
-          }
-          for (final room in playerRooms) {
-            allRooms.add(MapEntry(room, false)); // isHost = false
-          }
+            // Filter out rooms where user is host from joined rooms
+            final playerRooms = joinedRooms
+                .where((r) => r.hostId != userId)
+                .toList();
 
-          // Apply role filter
-          if (_roleFilter == RoleFilter.host) {
-            allRooms = allRooms.where((e) => e.value).toList();
-          } else if (_roleFilter == RoleFilter.player) {
-            allRooms = allRooms.where((e) => !e.value).toList();
-          }
+            // Filter team rooms to only include those not already in hosted or joined
+            final uniqueTeamRooms = teamRooms
+                .where((r) => !hostedCodes.contains(r.code) && !joinedCodes.contains(r.code))
+                .toList();
 
-          // Apply status filter
-          if (_statusFilter == StatusFilter.active) {
-            allRooms = allRooms.where((e) => e.key.status != RoomStatus.finished).toList();
-          }
-
-          // Note: Unread filter is applied in the UI by checking unreadCountProvider for each room
-          // The filter just hides rooms with 0 unread count when enabled
-
-          allRooms.sort((a, b) => b.key.createdAt.compareTo(a.key.createdAt));
-
-          if (allRooms.isEmpty) {
-            // Check if we have rooms but they're filtered out
-            final hasAnyRooms = hostedRooms.isNotEmpty || playerRooms.isNotEmpty;
-            if (hasAnyRooms) {
-              return _buildNoMatchingState(context);
+            // Combine all rooms and sort by creation time (newest first)
+            // MapEntry<RoomModel, bool> where bool = isHost
+            var allRooms = <MapEntry<RoomModel, bool>>[];
+            for (final room in hostedRooms) {
+              allRooms.add(MapEntry(room, true)); // isHost = true
             }
-            return _buildEmptyState(context);
-          }
+            for (final room in playerRooms) {
+              allRooms.add(MapEntry(room, false)); // isHost = false
+            }
+            // Team rooms where user is not yet a player - treat as player role
+            for (final room in uniqueTeamRooms) {
+              allRooms.add(MapEntry(room, false)); // isHost = false
+            }
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(userHostedRoomsProvider(userId));
-              ref.invalidate(userJoinedRoomsProvider(userId));
-            },
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                ...allRooms.map((entry) => _buildRoomCard(
-                  context,
-                  ref,
-                  entry.key,
-                  isHost: entry.value,
-                  userId: userId,
-                )),
-                const SizedBox(height: 16),
-              ],
-            ),
-          );
-        },
+            // Apply role filter
+            if (_roleFilter == RoleFilter.host) {
+              allRooms = allRooms.where((e) => e.value).toList();
+            } else if (_roleFilter == RoleFilter.player) {
+              allRooms = allRooms.where((e) => !e.value).toList();
+            }
+
+            // Apply status filter
+            if (_statusFilter == StatusFilter.active) {
+              allRooms = allRooms.where((e) => e.key.status != RoomStatus.finished).toList();
+            }
+
+            // Note: Unread filter is applied in the UI by checking unreadCountProvider for each room
+            // The filter just hides rooms with 0 unread count when enabled
+
+            allRooms.sort((a, b) => b.key.createdAt.compareTo(a.key.createdAt));
+
+            if (allRooms.isEmpty) {
+              // Check if we have rooms but they're filtered out
+              final hasAnyRooms = hostedRooms.isNotEmpty || playerRooms.isNotEmpty || uniqueTeamRooms.isNotEmpty;
+              if (hasAnyRooms) {
+                return _buildNoMatchingState(context);
+              }
+              return _buildEmptyState(context);
+            }
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(userHostedRoomsProvider(userId));
+                ref.invalidate(userJoinedRoomsProvider(userId));
+                ref.invalidate(userTeamRoomsProvider(userId));
+              },
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  ...allRooms.map((entry) => _buildRoomCard(
+                    context,
+                    ref,
+                    entry.key,
+                    isHost: entry.value,
+                    userId: userId,
+                  )),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
@@ -513,7 +533,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  void _navigateToRoom(BuildContext context, RoomModel room, bool isHost, String userId) {
+  Future<void> _navigateToRoom(BuildContext context, RoomModel room, bool isHost, String userId) async {
+    // For team rooms, auto-join the user if they're not already a player
+    if (room.teamId != null && !isHost) {
+      final currentUser = ref.read(currentUserProvider).valueOrNull;
+      if (currentUser != null) {
+        // Try to join the room (will do nothing if already joined)
+        await ref.read(roomNotifierProvider.notifier).joinRoom(
+          roomCode: room.code,
+          playerId: currentUser.id,
+          playerName: currentUser.displayName,
+        );
+      }
+    }
+
+    if (!context.mounted) return;
+
     if (room.status == RoomStatus.finished) {
       context.push('/results/${room.code}');
     } else {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qoomy/services/room_service.dart';
 import 'package:qoomy/models/room_model.dart';
 import 'package:qoomy/models/chat_message_model.dart';
+import 'package:qoomy/providers/team_provider.dart';
 
 final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
 
@@ -41,6 +42,23 @@ final hasCorrectAnswerProvider = StreamProvider.family<bool, String>((ref, roomC
 /// Provider to check if user has revealed the correct answer for a room
 final hasRevealedAnswerProvider = StreamProvider.family<bool, ({String roomCode, String userId})>((ref, params) {
   return ref.watch(roomServiceProvider).hasRevealedAnswerStream(params.roomCode, params.userId);
+});
+
+/// Provider for rooms from user's teams (includes all rooms where teamId matches any of user's teams)
+final userTeamRoomsProvider = StreamProvider.family<List<RoomModel>, String>((ref, userId) {
+  final userTeamsAsync = ref.watch(userTeamsProvider(userId));
+
+  return userTeamsAsync.when(
+    data: (teams) {
+      if (teams.isEmpty) {
+        return Stream.value([]);
+      }
+      final teamIds = teams.map((t) => t.id).toList();
+      return ref.watch(roomServiceProvider).userTeamRoomsStream(teamIds);
+    },
+    loading: () => Stream.value([]),
+    error: (_, __) => Stream.value([]),
+  );
 });
 
 class RoomNotifier extends StateNotifier<AsyncValue<String?>> {

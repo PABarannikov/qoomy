@@ -493,6 +493,58 @@ class RoomService {
         .map((snapshot) => snapshot.docs.isNotEmpty);
   }
 
+  /// Get all rooms for a specific team (including inactive ones)
+  Stream<List<RoomModel>> teamRoomsStream(String teamId) {
+    return _roomsCollection
+        .where('teamId', isEqualTo: teamId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => RoomModel.fromFirestore(doc, []))
+            .toList());
+  }
+
+  /// Get all rooms for multiple teams at once
+  Stream<List<RoomModel>> userTeamRoomsStream(List<String> teamIds) {
+    if (teamIds.isEmpty) {
+      return Stream.value([]);
+    }
+
+    // Firestore limits 'whereIn' to 30 values, so we need to handle larger lists
+    if (teamIds.length <= 30) {
+      return _roomsCollection
+          .where('teamId', whereIn: teamIds)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => RoomModel.fromFirestore(doc, []))
+              .toList());
+    }
+
+    // For more than 30 teams, combine multiple queries
+    // This is a rare edge case but handled for completeness
+    final chunks = <List<String>>[];
+    for (var i = 0; i < teamIds.length; i += 30) {
+      chunks.add(teamIds.sublist(i, i + 30 > teamIds.length ? teamIds.length : i + 30));
+    }
+
+    return Stream.periodic(const Duration(milliseconds: 100))
+        .asyncMap((_) async {
+      final allRooms = <RoomModel>[];
+      for (final chunk in chunks) {
+        final snapshot = await _roomsCollection
+            .where('teamId', whereIn: chunk)
+            .orderBy('createdAt', descending: true)
+            .get();
+        allRooms.addAll(snapshot.docs
+            .map((doc) => RoomModel.fromFirestore(doc, [])));
+      }
+      // Sort combined results by creation time
+      allRooms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return allRooms;
+    }).distinct();
+  }
+
   /// Get unread counts for multiple rooms at once
   Future<Map<String, int>> getUnreadCountsForRooms(
     List<String> roomCodes,
