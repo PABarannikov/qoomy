@@ -114,6 +114,8 @@ class AppLocalizations {
       'correct': 'Correct!',
       'wrong': 'Wrong',
       'you': 'You',
+      'hiddenAnswer': 'Answer hidden',
+      'answerHiddenUntilEvaluated': 'Answer will be revealed after AI evaluation',
 
       // Host screen
       'accessCode': 'Access Code',
@@ -297,6 +299,8 @@ class AppLocalizations {
       'correct': 'Правильно!',
       'wrong': 'Неправильно',
       'you': 'Вы',
+      'hiddenAnswer': 'Ответ скрыт',
+      'answerHiddenUntilEvaluated': 'Ответ будет показан после проверки AI',
 
       // Host screen
       'accessCode': 'Код доступа',
@@ -469,6 +473,8 @@ class AppLocalizations {
   String get correct => get('correct');
   String get wrong => get('wrong');
   String get you => get('you');
+  String get hiddenAnswer => get('hiddenAnswer');
+  String get answerHiddenUntilEvaluated => get('answerHiddenUntilEvaluated');
   String get accessCode => get('accessCode');
   String get hostPanel => get('hostPanel');
   String get players => get('players');

@@ -402,17 +402,29 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       itemBuilder: (context, index) {
         final message = messages[index];
         final isMe = isHost ? message.playerId == hostId : message.playerId == currentUserId;
-        return _buildMessageBubble(message, isMe: isMe, isAiMode: isAiMode, isHost: isHost, l10n: l10n);
+        return _buildMessageBubble(message, isMe: isMe, isAiMode: isAiMode, isHost: isHost, currentUserId: currentUserId, l10n: l10n);
       },
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message, {bool isMe = false, bool isAiMode = false, bool isHost = false, required AppLocalizations l10n}) {
+  Widget _buildMessageBubble(ChatMessage message, {bool isMe = false, bool isAiMode = false, bool isHost = false, String? currentUserId, required AppLocalizations l10n}) {
     final isAnswer = message.type == MessageType.answer;
     final isMarked = message.isCorrect != null;
 
+    // In AI mode, determine if the answer should be hidden
+    // Hidden if: AI mode + answer type + (not evaluated yet OR correct)
+    // Visible to: host, or the player who sent the answer
+    final bool shouldHideAnswer = isAiMode &&
+        isAnswer &&
+        !isHost &&
+        message.playerId != currentUserId &&
+        (message.isCorrect == null || message.isCorrect == true);
+
     Color backgroundColor;
-    if (isAnswer) {
+    if (shouldHideAnswer) {
+      // Hidden answer style - dark/mysterious
+      backgroundColor = Colors.grey.shade800;
+    } else if (isAnswer) {
       if (isMarked) {
         backgroundColor = message.isCorrect!
             ? QoomyTheme.successColor.withOpacity(0.1)
@@ -490,36 +502,64 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(message.text, style: const TextStyle(fontSize: 15)),
-                    // Player-specific: Result indicator after marked
-                    if (!isHost && isAnswer && isMarked) ...[
-                      const SizedBox(height: 8),
+                    if (shouldHideAnswer) ...[
+                      // Hidden answer display
                       Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            message.isCorrect! ? Icons.celebration : Icons.sentiment_dissatisfied,
-                            size: 16,
-                            color: message.isCorrect! ? QoomyTheme.successColor : QoomyTheme.errorColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            message.isCorrect! ? l10n.correct : l10n.wrong,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: message.isCorrect! ? QoomyTheme.successColor : QoomyTheme.errorColor,
+                          Icon(Icons.visibility_off, size: 16, color: Colors.grey.shade400),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              l10n.hiddenAnswer,
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.grey.shade400,
+                                fontStyle: FontStyle.italic,
+                              ),
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.answerHiddenUntilEvaluated,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ] else ...[
+                      Text(message.text, style: const TextStyle(fontSize: 15)),
+                      // Player-specific: Result indicator after marked
+                      if (!isHost && isAnswer && isMarked) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              message.isCorrect! ? Icons.celebration : Icons.sentiment_dissatisfied,
+                              size: 16,
+                              color: message.isCorrect! ? QoomyTheme.successColor : QoomyTheme.errorColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              message.isCorrect! ? l10n.correct : l10n.wrong,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                color: message.isCorrect! ? QoomyTheme.successColor : QoomyTheme.errorColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ],
                 ),
               ),
 
-              // AI reasoning (shown after AI marks the answer - only for correct answers)
-              if (isAiMode && isAnswer && isMarked && message.aiReasoning != null && message.isCorrect == true) ...[
+              // AI reasoning (shown after AI marks the answer - only for correct answers, not for hidden answers)
+              if (isAiMode && isAnswer && isMarked && message.aiReasoning != null && message.isCorrect == true && !shouldHideAnswer) ...[
                 const SizedBox(height: 6),
                 _buildAiReasoningBadge(message),
               ],
@@ -555,7 +595,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               ],
 
               // Waiting for AI indicator (in AI mode, answer not yet marked)
-              if (isAiMode && isAnswer && !isMarked) ...[
+              // Only show for own answers or host - not for hidden answers
+              if (isAiMode && isAnswer && !isMarked && !shouldHideAnswer) ...[
                 const SizedBox(height: 6),
                 Row(
                   mainAxisSize: MainAxisSize.min,
