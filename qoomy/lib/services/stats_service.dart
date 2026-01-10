@@ -20,12 +20,17 @@ class StatsService {
         .get();
     final questionsAsPlayer = playerDocsSnapshot.docs.length;
 
-    // Get all chat messages by user that are answers (not comments)
-    final answersSnapshot = await _firestore
+    // Get all chat messages by user (single where clause to avoid composite index)
+    final allMessagesSnapshot = await _firestore
         .collectionGroup('chat')
         .where('playerId', isEqualTo: userId)
-        .where('type', isEqualTo: 'answer')
         .get();
+
+    // Filter answers locally
+    final answers = allMessagesSnapshot.docs.where((doc) {
+      final data = doc.data();
+      return data['type'] == 'answer';
+    }).toList();
 
     int wrongAnswers = 0;
     int correctAnswersFirst = 0;
@@ -33,7 +38,7 @@ class StatsService {
     double totalPoints = 0.0;
 
     // Process each answer to determine if it was first correct or not
-    for (final answerDoc in answersSnapshot.docs) {
+    for (final answerDoc in answers) {
       final data = answerDoc.data();
       final isCorrect = data['isCorrect'] as bool?;
 
@@ -56,17 +61,27 @@ class StatsService {
       final answerSentAt = (data['sentAt'] as Timestamp?)?.toDate();
       if (answerSentAt == null) continue;
 
-      // Count correct answers in this room that were sent before this one
-      final earlierCorrectSnapshot = await _firestore
+      // Get all messages in this room to check for earlier correct answers
+      final roomChatSnapshot = await _firestore
           .collection('rooms')
           .doc(roomCode)
           .collection('chat')
-          .where('isCorrect', isEqualTo: true)
-          .where('sentAt', isLessThan: Timestamp.fromDate(answerSentAt))
-          .count()
           .get();
 
-      final earlierCorrectCount = earlierCorrectSnapshot.count ?? 0;
+      // Count correct answers sent before this one
+      int earlierCorrectCount = 0;
+      for (final chatDoc in roomChatSnapshot.docs) {
+        final chatData = chatDoc.data();
+        final chatIsCorrect = chatData['isCorrect'] as bool?;
+        if (chatIsCorrect != true) continue;
+
+        final chatSentAt = (chatData['sentAt'] as Timestamp?)?.toDate();
+        if (chatSentAt == null) continue;
+
+        if (chatSentAt.isBefore(answerSentAt)) {
+          earlierCorrectCount++;
+        }
+      }
 
       if (earlierCorrectCount == 0) {
         // This was the first correct answer
