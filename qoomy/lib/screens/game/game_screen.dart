@@ -503,31 +503,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (shouldHideAnswer) ...[
-                      // Hidden answer display
-                      Row(
-                        children: [
-                          Icon(Icons.visibility_off, size: 16, color: Colors.grey.shade400),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              l10n.hiddenAnswer,
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.grey.shade400,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.answerHiddenUntilEvaluated,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
+                      // Hidden answer display - different text for pending vs correct
+                      _buildHiddenAnswerContent(message.isCorrect == true, l10n),
                     ] else ...[
                       Text(message.text, style: const TextStyle(fontSize: 15)),
                       // Player-specific: Result indicator after marked
@@ -655,6 +632,42 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHiddenAnswerContent(bool isCorrectAnswer, AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              isCorrectAnswer ? Icons.emoji_events : Icons.visibility_off,
+              size: 16,
+              color: isCorrectAnswer ? Colors.amber.shade400 : Colors.grey.shade400,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l10n.hiddenAnswer,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: isCorrectAnswer ? Colors.amber.shade400 : Colors.grey.shade400,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          isCorrectAnswer ? l10n.tapToRevealCorrectAnswer : l10n.answerHiddenUntilEvaluated,
+          style: TextStyle(
+            fontSize: 11,
+            color: isCorrectAnswer ? Colors.amber.shade300 : Colors.grey.shade500,
+          ),
+        ),
+      ],
     );
   }
 
