@@ -22,6 +22,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isSending = false;
   ChatMessage? _replyingTo;
+  bool _initialScrollDone = false; // Track if we've scrolled on initial load
 
   @override
   void dispose() {
@@ -67,7 +68,14 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
 
     // Auto-scroll when new messages arrive
     ref.listen(chatProvider(widget.roomCode), (previous, next) {
-      _scrollToBottom();
+      // Scroll on initial load or when new messages arrive
+      if (!_initialScrollDone && next.hasValue) {
+        _initialScrollDone = true;
+        _scrollToBottom();
+      } else if (previous != null && previous.hasValue && next.hasValue) {
+        // New message arrived
+        _scrollToBottom();
+      }
     });
 
     return Scaffold(
