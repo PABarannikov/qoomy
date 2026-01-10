@@ -299,11 +299,48 @@ class RoomService {
     required String messageId,
     required bool isCorrect,
   }) async {
+    // Get the message to find the player who sent it
+    final messageDoc = await _roomsCollection
+        .doc(roomCode)
+        .collection('chat')
+        .doc(messageId)
+        .get();
+
+    if (!messageDoc.exists) return;
+
+    final messageData = messageDoc.data()!;
+    final playerId = messageData['playerId'] as String?;
+
+    // Update the message's isCorrect status
     await _roomsCollection
         .doc(roomCode)
         .collection('chat')
         .doc(messageId)
         .update({'isCorrect': isCorrect});
+
+    // Award points if marking as correct
+    if (isCorrect && playerId != null) {
+      // Count existing correct answers in this room
+      final correctAnswersSnapshot = await _roomsCollection
+          .doc(roomCode)
+          .collection('chat')
+          .where('isCorrect', isEqualTo: true)
+          .get();
+
+      // First correct answer gets 1 point, others get 0.5
+      // Note: the current message was just marked correct, so count includes it
+      final isFirstCorrect = correctAnswersSnapshot.docs.length <= 1;
+      final pointsToAdd = isFirstCorrect ? 1.0 : 0.5;
+
+      // Update player's score
+      await _roomsCollection
+          .doc(roomCode)
+          .collection('players')
+          .doc(playerId)
+          .update({
+        'score': FieldValue.increment(pointsToAdd),
+      });
+    }
   }
 
   /// Get all rooms created by a user (as host)

@@ -6,7 +6,7 @@ enum EvaluationMode { manual, ai }
 class Player {
   final String id;
   final String name;
-  final int score;
+  final double score;
   final DateTime joinedAt;
   final String? answer;
   final bool? isCorrect;
@@ -14,7 +14,7 @@ class Player {
   Player({
     required this.id,
     required this.name,
-    this.score = 0,
+    this.score = 0.0,
     required this.joinedAt,
     this.answer,
     this.isCorrect,
@@ -25,7 +25,7 @@ class Player {
     return Player(
       id: data['id'] ?? doc.id,
       name: data['name'] ?? '',
-      score: data['score'] ?? 0,
+      score: (data['score'] as num?)?.toDouble() ?? 0.0,
       joinedAt: (data['joinedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       answer: data['answer'],
       isCorrect: data['isCorrect'],
@@ -46,7 +46,7 @@ class Player {
   Player copyWith({
     String? id,
     String? name,
-    int? score,
+    double? score,
     DateTime? joinedAt,
     String? answer,
     bool? isCorrect,
