@@ -31,9 +31,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Mark room as read when entering
+    // Mark room as read and scroll to bottom when entering
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _markAsRead();
+      // Delay scroll to allow ListView to render with data
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) _scrollToBottom();
+      });
     });
   }
 

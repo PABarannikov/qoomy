@@ -25,6 +25,18 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
   bool _initialScrollDone = false; // Track if we've scrolled on initial load
 
   @override
+  void initState() {
+    super.initState();
+    // Scroll to bottom when entering the screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Delay scroll to allow ListView to render with data
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) _scrollToBottom();
+      });
+    });
+  }
+
+  @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
