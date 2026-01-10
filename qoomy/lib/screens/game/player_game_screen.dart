@@ -619,19 +619,29 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                     constraints: const BoxConstraints(),
                   ),
                 ),
-                // Answer button - secondary style
-                TextButton(
-                  onPressed: _isSending ? null : () => _sendMessageWithType(currentUser, MessageType.answer),
-                  style: TextButton.styleFrom(
-                    foregroundColor: QoomyTheme.primaryColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  child: Text(
-                    l10n.answerLabel,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+              ],
+            ),
+          ),
+          // Answer button - full width red button below input
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSending ? null : () => _sendMessageWithType(currentUser, MessageType.answer),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: QoomyTheme.errorColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
                   ),
                 ),
-              ],
+                child: Text(
+                  l10n.giveAnswer,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
             ),
           ),
         ],

@@ -111,6 +111,7 @@ class AppLocalizations {
       'typeComment': 'Type a comment...',
       'typeMessage': 'Type a message...',
       'answerLabel': 'Answer',
+      'giveAnswer': 'Give answer!',
       'comment': 'Comment',
       'aiEvaluating': 'AI is evaluating...',
       'correct': 'Correct!',
@@ -308,6 +309,7 @@ class AppLocalizations {
       'typeComment': 'Введите комментарий...',
       'typeMessage': 'Введите сообщение...',
       'answerLabel': 'Ответ',
+      'giveAnswer': 'Дать ответ!',
       'comment': 'Комментарий',
       'aiEvaluating': 'AI оценивает...',
       'correct': 'Правильно!',
@@ -494,6 +496,7 @@ class AppLocalizations {
   String get typeComment => get('typeComment');
   String get typeMessage => get('typeMessage');
   String get answerLabel => get('answerLabel');
+  String get giveAnswer => get('giveAnswer');
   String get comment => get('comment');
   String get aiEvaluating => get('aiEvaluating');
   String get correct => get('correct');
