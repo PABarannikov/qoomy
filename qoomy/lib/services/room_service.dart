@@ -427,6 +427,17 @@ class RoomService {
     return controller.stream;
   }
 
+  /// Stream to check if a room has at least one correct answer
+  Stream<bool> hasCorrectAnswerStream(String roomCode) {
+    return _roomsCollection
+        .doc(roomCode)
+        .collection('chat')
+        .where('isCorrect', isEqualTo: true)
+        .limit(1)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.isNotEmpty);
+  }
+
   /// Get unread counts for multiple rooms at once
   Future<Map<String, int>> getUnreadCountsForRooms(
     List<String> roomCodes,

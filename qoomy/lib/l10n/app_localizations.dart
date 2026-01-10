@@ -60,6 +60,8 @@ class AppLocalizations {
       'playing': 'Playing',
       'finished': 'Finished',
       'host': 'Host',
+      'correctAnswerGiven': 'Correct answer given',
+      'noCorrectAnswer': 'No correct answer',
 
       // Room modes
       'aiMode': 'AI Mode',
@@ -241,6 +243,8 @@ class AppLocalizations {
       'playing': 'Идёт игра',
       'finished': 'Завершено',
       'host': 'Ведущий',
+      'correctAnswerGiven': 'Есть правильный ответ',
+      'noCorrectAnswer': 'Нет правильного ответа',
 
       // Room modes
       'aiMode': 'AI режим',
@@ -421,6 +425,8 @@ class AppLocalizations {
   String get playing => get('playing');
   String get finished => get('finished');
   String get host => get('host');
+  String get correctAnswerGiven => get('correctAnswerGiven');
+  String get noCorrectAnswer => get('noCorrectAnswer');
   String get aiMode => get('aiMode');
   String get manual => get('manual');
   String get justNow => get('justNow');

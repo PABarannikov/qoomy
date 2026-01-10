@@ -238,9 +238,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required String userId,
   }) {
     final l10n = AppLocalizations.of(context);
-    final statusColor = _getStatusColor(room.status);
-    final statusText = _getStatusText(room.status, l10n);
     final unreadCountAsync = ref.watch(unreadCountProvider((roomCode: room.code, userId: userId)));
+    final hasCorrectAnswerAsync = ref.watch(hasCorrectAnswerProvider(room.code));
+
+    // Determine status color and text based on room status and correct answer
+    Color statusColor;
+    String statusText;
+
+    if (room.status == RoomStatus.finished) {
+      statusColor = Colors.grey;
+      statusText = l10n.finished;
+    } else if (room.status == RoomStatus.playing) {
+      final hasCorrect = hasCorrectAnswerAsync.valueOrNull ?? false;
+      if (hasCorrect) {
+        statusColor = QoomyTheme.successColor;
+        statusText = l10n.correctAnswerGiven;
+      } else {
+        statusColor = Colors.orange;
+        statusText = l10n.noCorrectAnswer;
+      }
+    } else {
+      statusColor = Colors.orange;
+      statusText = l10n.waiting;
+    }
 
     // Apply unread filter: hide rooms with 0 unread when filter is active
     if (_unreadFilter == UnreadFilter.unread) {

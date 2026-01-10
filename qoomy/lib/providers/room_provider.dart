@@ -33,6 +33,11 @@ final unreadCountProvider = StreamProvider.family<int, ({String roomCode, String
   return ref.watch(roomServiceProvider).unreadCountStream(params.roomCode, params.userId);
 });
 
+/// Provider to check if a room has at least one correct answer
+final hasCorrectAnswerProvider = StreamProvider.family<bool, String>((ref, roomCode) {
+  return ref.watch(roomServiceProvider).hasCorrectAnswerStream(roomCode);
+});
+
 class RoomNotifier extends StateNotifier<AsyncValue<String?>> {
   final RoomService _roomService;
 
