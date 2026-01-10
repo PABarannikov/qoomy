@@ -117,6 +117,7 @@ class AppLocalizations {
       'hiddenAnswer': 'Answer hidden',
       'answerHiddenUntilEvaluated': 'Answer will be revealed after evaluation',
       'tapToRevealCorrectAnswer': 'Tap to reveal the correct answer',
+      'youGotItRight': 'You got it right!',
 
       // Host screen
       'accessCode': 'Access Code',
@@ -303,6 +304,7 @@ class AppLocalizations {
       'hiddenAnswer': 'Ответ скрыт',
       'answerHiddenUntilEvaluated': 'Ответ будет показан после проверки',
       'tapToRevealCorrectAnswer': 'Нажмите чтобы увидеть правильный ответ',
+      'youGotItRight': 'Вы ответили правильно!',
 
       // Host screen
       'accessCode': 'Код доступа',
@@ -478,6 +480,7 @@ class AppLocalizations {
   String get hiddenAnswer => get('hiddenAnswer');
   String get answerHiddenUntilEvaluated => get('answerHiddenUntilEvaluated');
   String get tapToRevealCorrectAnswer => get('tapToRevealCorrectAnswer');
+  String get youGotItRight => get('youGotItRight');
   String get accessCode => get('accessCode');
   String get hostPanel => get('hostPanel');
   String get players => get('players');

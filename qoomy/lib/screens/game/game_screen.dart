@@ -130,12 +130,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     bool isHost,
     dynamic currentUser,
   ) {
+    // Check if current player has a confirmed correct answer
+    final hasCorrectAnswer = chatAsync.whenOrNull(
+      data: (messages) => messages.any((msg) =>
+          msg.playerId == currentUser?.id &&
+          msg.type == MessageType.answer &&
+          msg.isCorrect == true),
+    ) ?? false;
+
     return Column(
       children: [
         // Header with back button, access code, and profile menu
         _buildHeader(context, room, l10n, isHost),
 
-        // Question card (and answer for host) - takes only needed space
+        // Question card (and answer for host or winner) - takes only needed space
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
@@ -144,7 +152,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             children: [
               _buildQuestionCard(room, isHost, l10n),
               if (isHost)
-                _buildAnswerSection(room, l10n),
+                _buildAnswerSection(room, l10n, isHost: true)
+              else if (hasCorrectAnswer)
+                _buildAnswerSection(room, l10n, isHost: false),
             ],
           ),
         ),
@@ -169,7 +179,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         if (isHost)
           _buildHostMessageInput(room, l10n)
         else
-          _buildPlayerMessageInput(currentUser, l10n),
+          _buildPlayerMessageInput(currentUser, l10n, hasCorrectAnswer: hasCorrectAnswer),
       ],
     );
   }
@@ -310,7 +320,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  Widget _buildAnswerSection(RoomModel room, AppLocalizations l10n) {
+  Widget _buildAnswerSection(RoomModel room, AppLocalizations l10n, {required bool isHost}) {
     // Hide when question is collapsed
     return AnimatedSize(
       duration: const Duration(milliseconds: 200),
@@ -327,26 +337,32 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.check_circle, color: QoomyTheme.successColor, size: 20),
+                          Icon(
+                            isHost ? Icons.check_circle : Icons.emoji_events,
+                            color: isHost ? QoomyTheme.successColor : Colors.amber,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
-                            l10n.correctAnswer,
+                            isHost ? l10n.correctAnswer : l10n.youGotItRight,
                             style: TextStyle(
-                              color: QoomyTheme.successColor,
+                              color: isHost ? QoomyTheme.successColor : Colors.amber.shade700,
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
                           ),
-                          const Spacer(),
-                          Icon(Icons.visibility_off, color: Colors.grey.shade400, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            l10n.onlyHostCanSee,
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 11,
+                          if (isHost) ...[
+                            const Spacer(),
+                            Icon(Icons.visibility_off, color: Colors.grey.shade400, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              l10n.onlyHostCanSee,
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 11,
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -725,7 +741,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  Widget _buildPlayerMessageInput(dynamic currentUser, AppLocalizations l10n) {
+  Widget _buildPlayerMessageInput(dynamic currentUser, AppLocalizations l10n, {bool hasCorrectAnswer = false}) {
+    // If player has correct answer, force comment mode
+    if (hasCorrectAnswer && _selectedType == MessageType.answer) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _selectedType = MessageType.comment);
+      });
+    }
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -734,63 +757,83 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       ),
       child: Column(
         children: [
-          // Type selector (Answer / Comment)
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedType = MessageType.answer),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _selectedType == MessageType.answer
-                          ? QoomyTheme.primaryColor
-                          : Colors.grey.shade200,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        bottomLeft: Radius.circular(8),
+          // Type selector (Answer / Comment) - Answer disabled for winners
+          if (hasCorrectAnswer)
+            // Winner can only send comments
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade600,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                l10n.comment,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedType = MessageType.answer),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _selectedType == MessageType.answer
+                            ? QoomyTheme.primaryColor
+                            : Colors.grey.shade200,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(8),
+                          bottomLeft: Radius.circular(8),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      l10n.answerLabel,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: _selectedType == MessageType.answer ? Colors.white : Colors.grey.shade700,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                      child: Text(
+                        l10n.answerLabel,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _selectedType == MessageType.answer ? Colors.white : Colors.grey.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedType = MessageType.comment),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _selectedType == MessageType.comment
-                          ? Colors.grey.shade600
-                          : Colors.grey.shade200,
-                      borderRadius: const BorderRadius.only(
-                        topRight: Radius.circular(8),
-                        bottomRight: Radius.circular(8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedType = MessageType.comment),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _selectedType == MessageType.comment
+                            ? Colors.grey.shade600
+                            : Colors.grey.shade200,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(8),
+                          bottomRight: Radius.circular(8),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      l10n.comment,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: _selectedType == MessageType.comment ? Colors.white : Colors.grey.shade700,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                      child: Text(
+                        l10n.comment,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _selectedType == MessageType.comment ? Colors.white : Colors.grey.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           const SizedBox(height: 8),
 
           // Text input and send button
