@@ -73,6 +73,14 @@ class AppHeader extends ConsumerWidget {
                   tooltip: l10n.teams,
                 ),
 
+              // Admin button (only for admins)
+              if (ref.watch(isAdminProvider))
+                IconButton(
+                  icon: const Icon(Icons.admin_panel_settings),
+                  onPressed: () => context.push('/admin'),
+                  tooltip: 'Admin',
+                ),
+
               // Language toggle
               IconButton(
                 icon: Text(

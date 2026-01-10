@@ -88,3 +88,15 @@ final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AsyncValue<void>>((ref) {
   return AuthNotifier(ref.watch(authServiceProvider));
 });
+
+// Admin emails list - add your admin emails here
+const List<String> _adminEmails = [
+  'pabarannikov@gmail.com',
+];
+
+/// Provider to check if current user is an admin
+final isAdminProvider = Provider<bool>((ref) {
+  final user = ref.watch(currentUserProvider).valueOrNull;
+  if (user == null) return false;
+  return _adminEmails.contains(user.email.toLowerCase());
+});

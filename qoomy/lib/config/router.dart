@@ -15,6 +15,7 @@ import 'package:qoomy/screens/team/teams_list_screen.dart';
 import 'package:qoomy/screens/team/create_team_screen.dart';
 import 'package:qoomy/screens/team/team_details_screen.dart';
 import 'package:qoomy/screens/team/join_team_screen.dart';
+import 'package:qoomy/screens/admin/admin_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -119,6 +120,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final inviteCode = state.pathParameters['inviteCode']!;
           return JoinTeamScreen(initialCode: inviteCode);
         },
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, state) => const AdminScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
