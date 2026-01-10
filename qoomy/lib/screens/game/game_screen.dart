@@ -909,21 +909,36 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Text input with keyboard handling (Enter to send, Shift+Enter for newline)
                 Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: l10n.typeComment,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
+                  child: KeyboardListener(
+                    focusNode: FocusNode(),
+                    onKeyEvent: (event) {
+                      if (event is KeyDownEvent &&
+                          event.logicalKey == LogicalKeyboardKey.enter &&
+                          !HardwareKeyboard.instance.isShiftPressed) {
+                        if (!_isSending && _messageController.text.trim().isNotEmpty) {
+                          _sendHostMessage(room, l10n);
+                        }
+                      }
+                    },
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: l10n.typeComment,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      enabled: !_isSending,
+                      maxLines: 5,
+                      minLines: 1,
+                      keyboardType: TextInputType.multiline,
                     ),
-                    enabled: !_isSending,
-                    onSubmitted: (_) => _sendHostMessage(room, l10n),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -935,7 +950,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                           height: 24,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.send, color: QoomyTheme.primaryColor),
+                      : const Icon(Icons.send, color: QoomyTheme.primaryColor, size: 28, weight: 700),
                 ),
               ],
             ),
