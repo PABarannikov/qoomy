@@ -23,24 +23,18 @@ for /f %%i in ('git ls-files --others --exclude-standard') do (
     exit /b 1
 )
 
-echo [1/3] Building Flutter web...
-call "C:/flutter/flutter/bin/flutter.bat" build web --release
+echo [1/2] Pushing to git...
+git push
 if %errorlevel% neq 0 (
-    echo ERROR: Build failed!
+    echo ERROR: Git push failed!
     exit /b 1
 )
 
 echo.
-echo [2/3] Deploying to Firebase...
-call firebase deploy --only hosting
-if %errorlevel% neq 0 (
-    echo ERROR: Deploy failed!
-    exit /b 1
-)
-
-echo.
-echo [3/3] Done!
-echo Deployed commit:
+echo [2/2] Done!
+echo Pushed commit:
 git log --oneline -1
+echo.
+echo Firebase deployment will be triggered by GitHub Actions.
 
 endlocal
