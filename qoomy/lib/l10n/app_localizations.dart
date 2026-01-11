@@ -200,6 +200,7 @@ class AppLocalizations {
       'enterEmailToSearch': 'Enter email to search for users',
       'add': 'Add',
       'alreadyMember': 'Already a member',
+      'toQuestions': 'To Questions',
 
       // Create room extended
       'imageOptional': 'Image (Optional)',
@@ -411,6 +412,7 @@ class AppLocalizations {
       'enterEmailToSearch': 'Введите email для поиска пользователей',
       'add': 'Добавить',
       'alreadyMember': 'Уже участник',
+      'toQuestions': 'К вопросам',
 
       // Create room extended
       'imageOptional': 'Изображение (необязательно)',
@@ -600,6 +602,7 @@ class AppLocalizations {
   String get enterEmailToSearch => get('enterEmailToSearch');
   String get add => get('add');
   String get alreadyMember => get('alreadyMember');
+  String get toQuestions => get('toQuestions');
   String get imageOptional => get('imageOptional');
   String get onlyYouSeeThis => get('onlyYouSeeThis');
   String get commentDescription => get('commentDescription');

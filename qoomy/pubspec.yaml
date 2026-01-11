@@ -50,6 +50,19 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/qoomy_icon.png"
+  web:
+    generate: true
+    image_path: "assets/qoomy_icon.png"
+    background_color: "#ffffff"
+    theme_color: "#7C4DFF"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/qoomy_icon.png"
 
 flutter:
   uses-material-design: true

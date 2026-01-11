@@ -110,6 +110,22 @@ class TeamDetailsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
 
+          // To questions button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => context.go('/'),
+              icon: const Icon(Icons.quiz_outlined),
+              label: Text(l10n.toQuestions),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: QoomyTheme.errorColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // Invite link section
           Card(
             child: Padding(
