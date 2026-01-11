@@ -48,27 +48,27 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: String.fromEnvironment('FIREBASE_WEB_API_KEY'),
-    appId: String.fromEnvironment('FIREBASE_WEB_APP_ID', defaultValue: '1:338120090374:web:017cc6dbe4ec263764f487'),
-    messagingSenderId: String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID', defaultValue: '338120090374'),
-    projectId: String.fromEnvironment('FIREBASE_PROJECT_ID', defaultValue: 'qoomy-quiz-game'),
-    authDomain: String.fromEnvironment('FIREBASE_AUTH_DOMAIN', defaultValue: 'qoomy-quiz-game.firebaseapp.com'),
-    storageBucket: String.fromEnvironment('FIREBASE_STORAGE_BUCKET', defaultValue: 'qoomy-quiz-game.firebasestorage.app'),
+    appId: '1:338120090374:web:017cc6dbe4ec263764f487',
+    messagingSenderId: '338120090374',
+    projectId: 'qoomy-quiz-game',
+    authDomain: 'qoomy-quiz-game.firebaseapp.com',
+    storageBucket: 'qoomy-quiz-game.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: String.fromEnvironment('FIREBASE_ANDROID_API_KEY'),
-    appId: String.fromEnvironment('FIREBASE_ANDROID_APP_ID', defaultValue: '1:338120090374:android:f5bbefcb6712827c64f487'),
-    messagingSenderId: String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID', defaultValue: '338120090374'),
-    projectId: String.fromEnvironment('FIREBASE_PROJECT_ID', defaultValue: 'qoomy-quiz-game'),
-    storageBucket: String.fromEnvironment('FIREBASE_STORAGE_BUCKET', defaultValue: 'qoomy-quiz-game.firebasestorage.app'),
+    appId: '1:338120090374:android:f5bbefcb6712827c64f487',
+    messagingSenderId: '338120090374',
+    projectId: 'qoomy-quiz-game',
+    storageBucket: 'qoomy-quiz-game.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: String.fromEnvironment('FIREBASE_IOS_API_KEY'),
-    appId: String.fromEnvironment('FIREBASE_IOS_APP_ID', defaultValue: '1:338120090374:ios:d8dbf3ee4dfecf0c64f487'),
-    messagingSenderId: String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID', defaultValue: '338120090374'),
-    projectId: String.fromEnvironment('FIREBASE_PROJECT_ID', defaultValue: 'qoomy-quiz-game'),
-    storageBucket: String.fromEnvironment('FIREBASE_STORAGE_BUCKET', defaultValue: 'qoomy-quiz-game.firebasestorage.app'),
+    appId: '1:338120090374:ios:d8dbf3ee4dfecf0c64f487',
+    messagingSenderId: '338120090374',
+    projectId: 'qoomy-quiz-game',
+    storageBucket: 'qoomy-quiz-game.firebasestorage.app',
     iosBundleId: 'com.qoomy.qoomy',
   );
 }
