@@ -8,6 +8,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+      FIREBASE_ANDROID_API_KEY: ${{ secrets.FIREBASE_ANDROID_API_KEY }}
+      FIREBASE_IOS_API_KEY: ${{ secrets.FIREBASE_IOS_API_KEY }}
 
     steps:
       - name: Checkout repository
@@ -25,7 +29,12 @@ jobs:
 
       - name: Build web
         working-directory: ./qoomy
-        run: flutter build web --release --dart-define=FIREBASE_WEB_API_KEY=${{ secrets.FIREBASE_WEB_API_KEY }} --dart-define=FIREBASE_ANDROID_API_KEY=${{ secrets.FIREBASE_ANDROID_API_KEY }} --dart-define=FIREBASE_IOS_API_KEY=${{ secrets.FIREBASE_IOS_API_KEY }}
+        run: |
+          echo "Building with API keys..."
+          flutter build web --release \
+            --dart-define="FIREBASE_WEB_API_KEY=${FIREBASE_WEB_API_KEY}" \
+            --dart-define="FIREBASE_ANDROID_API_KEY=${FIREBASE_ANDROID_API_KEY}" \
+            --dart-define="FIREBASE_IOS_API_KEY=${FIREBASE_IOS_API_KEY}"
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
