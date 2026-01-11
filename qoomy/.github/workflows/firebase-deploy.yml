@@ -23,27 +23,30 @@ jobs:
         working-directory: ./qoomy
         run: flutter pub get
 
-      - name: Create env file
+      - name: Create env file for dart-define
         working-directory: ./qoomy
         run: |
-          echo "FIREBASE_WEB_API_KEY=${{ secrets.FIREBASE_WEB_API_KEY }}" > .env
-          echo "FIREBASE_ANDROID_API_KEY=${{ secrets.FIREBASE_ANDROID_API_KEY }}" >> .env
-          echo "FIREBASE_IOS_API_KEY=${{ secrets.FIREBASE_IOS_API_KEY }}" >> .env
-          echo "Created .env file with $(wc -l < .env) lines"
+          cat > .env << 'ENVEOF'
+          FIREBASE_WEB_API_KEY=${{ secrets.FIREBASE_WEB_API_KEY }}
+          FIREBASE_ANDROID_API_KEY=${{ secrets.FIREBASE_ANDROID_API_KEY }}
+          FIREBASE_IOS_API_KEY=${{ secrets.FIREBASE_IOS_API_KEY }}
+          ENVEOF
+          echo "ENV file created with contents:"
+          cat .env | wc -l
+          echo "lines"
 
-      - name: Build web
-        working-directory: ./qoomy
-        run: flutter build web --release --dart-define-from-file=.env
-
-      - name: Verify build
+      - name: Build web with dart-define-from-file
         working-directory: ./qoomy
         run: |
-          echo "Checking for API key in build..."
-          if grep -q "AIzaSy" build/web/main.dart.js; then
-            echo "API key found in build!"
-          else
-            echo "WARNING: API key NOT found in build!"
-          fi
+          echo "Building web with env file..."
+          flutter build web --release --dart-define-from-file=.env
+          echo "Build completed."
+
+      - name: Check if API key is in build
+        working-directory: ./qoomy
+        run: |
+          echo "Searching for API key pattern in build..."
+          grep -c "AIzaSy" build/web/main.dart.js || echo "Pattern count: 0"
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
