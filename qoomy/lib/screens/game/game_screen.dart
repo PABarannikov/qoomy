@@ -10,6 +10,7 @@ import 'package:qoomy/models/chat_message_model.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
 import 'package:qoomy/widgets/app_header.dart';
+import 'package:qoomy/widgets/zoomable_image_viewer.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
   final String roomCode;
@@ -349,30 +350,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            // Image (hidden when collapsed)
+            // Image (hidden when collapsed) - tappable to open fullscreen viewer
             AnimatedSize(
               duration: const Duration(milliseconds: 200),
               child: hasImage && !showCollapsed
                   ? Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: ClipRRect(
+                      child: ZoomableImageViewer(
+                        imageUrl: room.imageUrl!,
+                        fit: BoxFit.contain,
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          room.imageUrl!,
-                          width: double.infinity,
-                          fit: BoxFit.contain,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              height: 100,
-                              color: Colors.white24,
-                              child: const Center(
-                                child: CircularProgressIndicator(color: Colors.white70),
-                              ),
-                            );
-                          },
-                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                        ),
                       ),
                     )
                   : const SizedBox.shrink(),

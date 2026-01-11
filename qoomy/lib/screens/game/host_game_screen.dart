@@ -7,6 +7,7 @@ import 'package:qoomy/models/room_model.dart';
 import 'package:qoomy/models/chat_message_model.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
+import 'package:qoomy/widgets/zoomable_image_viewer.dart';
 
 class HostGameScreen extends ConsumerStatefulWidget {
   final String roomCode;
@@ -313,19 +314,11 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
             ),
             if (room.imageUrl != null) ...[
               const SizedBox(height: 12),
-              ClipRRect(
+              ZoomableImageViewer(
+                imageUrl: room.imageUrl!,
+                height: 120,
+                fit: BoxFit.cover,
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  room.imageUrl!,
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 120,
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.broken_image),
-                  ),
-                ),
               ),
             ],
           ],
