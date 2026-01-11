@@ -572,17 +572,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: OutlinedButton(
               onPressed: () => context.push('/join-room'),
               style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 side: BorderSide(color: Colors.grey.shade400),
                 foregroundColor: Colors.grey.shade700,
               ),
-              child: Text(l10n.joinRoom),
+              child: Text(l10n.joinRoom, maxLines: 1),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton(
               onPressed: () => context.push('/create-room'),
-              child: Text(l10n.createRoom),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              child: Text(l10n.createRoom, maxLines: 1),
             ),
           ),
         ],
