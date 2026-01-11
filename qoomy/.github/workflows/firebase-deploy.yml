@@ -23,24 +23,9 @@ jobs:
         working-directory: ./qoomy
         run: flutter pub get
 
-      - name: Debug - Check if secrets are set
-        run: |
-          if [ -n "${{ secrets.FIREBASE_WEB_API_KEY }}" ]; then
-            echo "FIREBASE_WEB_API_KEY is set (length: ${#FIREBASE_WEB_API_KEY})"
-          else
-            echo "FIREBASE_WEB_API_KEY is NOT set"
-          fi
-        env:
-          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
-
       - name: Build web
         working-directory: ./qoomy
-        run: |
-          echo "Building with dart-define..."
-          flutter build web --release \
-            --dart-define=FIREBASE_WEB_API_KEY="${{ secrets.FIREBASE_WEB_API_KEY }}" \
-            --dart-define=FIREBASE_ANDROID_API_KEY="${{ secrets.FIREBASE_ANDROID_API_KEY }}" \
-            --dart-define=FIREBASE_IOS_API_KEY="${{ secrets.FIREBASE_IOS_API_KEY }}"
+        run: flutter build web --release --dart-define=FIREBASE_WEB_API_KEY=${{ secrets.FIREBASE_WEB_API_KEY }} --dart-define=FIREBASE_ANDROID_API_KEY=${{ secrets.FIREBASE_ANDROID_API_KEY }} --dart-define=FIREBASE_IOS_API_KEY=${{ secrets.FIREBASE_IOS_API_KEY }}
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
