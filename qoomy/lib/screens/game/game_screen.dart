@@ -280,12 +280,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Show full question by default, collapse only when scrolled down and content is collapsible
     final showCollapsed = _questionCollapsed && isCollapsible;
 
+    // Calculate max height based on screen size (40% of screen height when expanded)
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxExpandedHeight = screenHeight * 0.4;
+
     return Card(
       color: QoomyTheme.primaryColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
@@ -339,30 +344,39 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            // Question text
-            Text(
-              room.question,
-              maxLines: showCollapsed ? 2 : null,
-              overflow: showCollapsed ? TextOverflow.ellipsis : TextOverflow.visible,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            // Image (hidden when collapsed) - tappable to open fullscreen viewer
+            // Scrollable content area for question text and image
             AnimatedSize(
               duration: const Duration(milliseconds: 200),
-              child: hasImage && !showCollapsed
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: ZoomableImageViewer(
-                        imageUrl: room.imageUrl!,
-                        fit: BoxFit.contain,
-                        borderRadius: BorderRadius.circular(8),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: showCollapsed ? 50 : maxExpandedHeight,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Question text
+                      Text(
+                        room.question,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    )
-                  : const SizedBox.shrink(),
+                      // Image - tappable to open fullscreen viewer
+                      if (hasImage && !showCollapsed) ...[
+                        const SizedBox(height: 12),
+                        ZoomableImageViewer(
+                          imageUrl: room.imageUrl!,
+                          fit: BoxFit.contain,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),
