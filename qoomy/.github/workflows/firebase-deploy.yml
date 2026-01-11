@@ -17,6 +17,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Debug secrets
+        run: |
+          echo "WEB key length: ${#FIREBASE_WEB_API_KEY}"
+          echo "WEB key starts with: ${FIREBASE_WEB_API_KEY:0:10}..."
+          if [ -z "$FIREBASE_WEB_API_KEY" ]; then
+            echo "ERROR: FIREBASE_WEB_API_KEY is empty!"
+            exit 1
+          fi
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -30,7 +39,7 @@ jobs:
       - name: Build web
         working-directory: ./qoomy
         run: |
-          echo "Building with API keys..."
+          echo "Building with dart-define..."
           flutter build web --release \
             --dart-define="FIREBASE_WEB_API_KEY=${FIREBASE_WEB_API_KEY}" \
             --dart-define="FIREBASE_ANDROID_API_KEY=${FIREBASE_ANDROID_API_KEY}" \
