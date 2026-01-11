@@ -23,21 +23,13 @@ jobs:
         working-directory: ./qoomy
         run: flutter pub get
 
-      - name: Build web with environment variables
+      - name: Build web
         working-directory: ./qoomy
-        env:
-          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
-          FIREBASE_ANDROID_API_KEY: ${{ secrets.FIREBASE_ANDROID_API_KEY }}
-          FIREBASE_IOS_API_KEY: ${{ secrets.FIREBASE_IOS_API_KEY }}
-        shell: bash
-        run: |
-          echo "Web key length: ${#FIREBASE_WEB_API_KEY}"
-          echo "Android key length: ${#FIREBASE_ANDROID_API_KEY}"
-          echo "iOS key length: ${#FIREBASE_IOS_API_KEY}"
-          flutter build web --release \
-            --dart-define=FIREBASE_WEB_API_KEY="${FIREBASE_WEB_API_KEY}" \
-            --dart-define=FIREBASE_ANDROID_API_KEY="${FIREBASE_ANDROID_API_KEY}" \
-            --dart-define=FIREBASE_IOS_API_KEY="${FIREBASE_IOS_API_KEY}"
+        run: flutter build web --release --dart-define=FIREBASE_WEB_API_KEY=${{ secrets.FIREBASE_WEB_API_KEY }} --dart-define=FIREBASE_ANDROID_API_KEY=${{ secrets.FIREBASE_ANDROID_API_KEY }} --dart-define=FIREBASE_IOS_API_KEY=${{ secrets.FIREBASE_IOS_API_KEY }}
+
+      - name: Verify API key in build
+        working-directory: ./qoomy
+        run: grep -o "AIzaSy[a-zA-Z0-9_-]*" build/web/main.dart.js | head -3 || echo "No API key found in build"
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
