@@ -8,23 +8,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    env:
-      FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
-      FIREBASE_ANDROID_API_KEY: ${{ secrets.FIREBASE_ANDROID_API_KEY }}
-      FIREBASE_IOS_API_KEY: ${{ secrets.FIREBASE_IOS_API_KEY }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Debug secrets
-        run: |
-          echo "WEB key length: ${#FIREBASE_WEB_API_KEY}"
-          echo "WEB key starts with: ${FIREBASE_WEB_API_KEY:0:10}..."
-          if [ -z "$FIREBASE_WEB_API_KEY" ]; then
-            echo "ERROR: FIREBASE_WEB_API_KEY is empty!"
-            exit 1
-          fi
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -36,14 +23,21 @@ jobs:
         working-directory: ./qoomy
         run: flutter pub get
 
-      - name: Build web
+      - name: Build web with environment variables
         working-directory: ./qoomy
+        env:
+          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+          FIREBASE_ANDROID_API_KEY: ${{ secrets.FIREBASE_ANDROID_API_KEY }}
+          FIREBASE_IOS_API_KEY: ${{ secrets.FIREBASE_IOS_API_KEY }}
+        shell: bash
         run: |
-          echo "Building with dart-define..."
+          echo "Web key length: ${#FIREBASE_WEB_API_KEY}"
+          echo "Android key length: ${#FIREBASE_ANDROID_API_KEY}"
+          echo "iOS key length: ${#FIREBASE_IOS_API_KEY}"
           flutter build web --release \
-            --dart-define="FIREBASE_WEB_API_KEY=${FIREBASE_WEB_API_KEY}" \
-            --dart-define="FIREBASE_ANDROID_API_KEY=${FIREBASE_ANDROID_API_KEY}" \
-            --dart-define="FIREBASE_IOS_API_KEY=${FIREBASE_IOS_API_KEY}"
+            --dart-define=FIREBASE_WEB_API_KEY="${FIREBASE_WEB_API_KEY}" \
+            --dart-define=FIREBASE_ANDROID_API_KEY="${FIREBASE_ANDROID_API_KEY}" \
+            --dart-define=FIREBASE_IOS_API_KEY="${FIREBASE_IOS_API_KEY}"
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
