@@ -39,15 +39,11 @@ jobs:
           flutter build web --release --dart-define-from-file=.env
           echo "Build completed."
 
-      - name: Check build output
+      - name: Copy manifest.json to build
         working-directory: ./qoomy
         run: |
-          echo "Files in build/web:"
-          ls -la build/web/
-          echo "---"
-          echo "manifest.json contents:"
-          cat build/web/manifest.json
-          echo "---"
+          cp web/manifest.json build/web/manifest.json
+          echo "manifest.json copied to build/web/"
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
