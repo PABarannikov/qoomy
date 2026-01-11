@@ -4,6 +4,7 @@
 !package.json
 !firebase.json
 !tsconfig.json
+!manifest.json
 client_secret*.json
 
 # Flutter/Dart
