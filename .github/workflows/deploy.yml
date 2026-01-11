@@ -39,11 +39,15 @@ jobs:
           flutter build web --release --dart-define-from-file=.env
           echo "Build completed."
 
-      - name: Check if API key is in build
+      - name: Check build output
         working-directory: ./qoomy
         run: |
-          echo "Searching for API key pattern in build..."
-          grep -c "AIzaSy" build/web/main.dart.js || echo "Pattern count: 0"
+          echo "Files in build/web:"
+          ls -la build/web/
+          echo "---"
+          echo "manifest.json contents:"
+          cat build/web/manifest.json
+          echo "---"
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
