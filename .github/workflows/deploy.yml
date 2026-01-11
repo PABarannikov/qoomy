@@ -1,10 +1,9 @@
-name: Build and Deploy to Firebase
+name: Deploy to Firebase Hosting
 
 on:
   push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+    branches:
+      - master
 
 jobs:
   build-and-deploy:
@@ -17,29 +16,40 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.0'
+          flutter-version: 'stable'
           channel: 'stable'
-          cache: true
 
       - name: Get dependencies
         working-directory: ./qoomy
         run: flutter pub get
 
-      - name: Analyze code
+      - name: Create env file for dart-define
         working-directory: ./qoomy
-        continue-on-error: true
-        run: flutter analyze
+        run: |
+          echo "FIREBASE_WEB_API_KEY=${{ secrets.FIREBASE_WEB_API_KEY }}" > .env
+          echo "FIREBASE_ANDROID_API_KEY=${{ secrets.FIREBASE_ANDROID_API_KEY }}" >> .env
+          echo "FIREBASE_IOS_API_KEY=${{ secrets.FIREBASE_IOS_API_KEY }}" >> .env
+          echo "ENV file created. Line count:"
+          wc -l .env
 
-      - name: Build web
+      - name: Build web with dart-define-from-file
         working-directory: ./qoomy
-        run: flutter build web --release
+        run: |
+          echo "Building web with env file..."
+          flutter build web --release --dart-define-from-file=.env
+          echo "Build completed."
+
+      - name: Check if API key is in build
+        working-directory: ./qoomy
+        run: |
+          echo "Searching for API key pattern in build..."
+          grep -c "AIzaSy" build/web/main.dart.js || echo "Pattern count: 0"
 
       - name: Deploy to Firebase Hosting
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           channelId: live
           projectId: qoomy-quiz-game
           entryPoint: ./qoomy
