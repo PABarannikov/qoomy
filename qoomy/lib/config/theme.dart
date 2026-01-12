@@ -82,7 +82,7 @@ class QoomyTheme {
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 4,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -162,7 +162,7 @@ class QoomyTheme {
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 4,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
