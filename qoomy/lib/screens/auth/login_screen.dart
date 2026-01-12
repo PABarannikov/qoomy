@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -38,6 +39,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _signInWithGoogle() async {
     await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+  }
+
+  Future<void> _signInWithApple() async {
+    await ref.read(authNotifierProvider.notifier).signInWithApple();
   }
 
   @override
@@ -195,6 +200,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata),
                       ),
                       label: Text(l10n.continueWithGoogle),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: isLoading ? null : _signInWithApple,
+                      icon: const Icon(Icons.apple, size: 24),
+                      label: Text(l10n.continueWithApple),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.black,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     Row(

@@ -29,6 +29,7 @@ class AppLocalizations {
       'displayName': 'Display Name',
       'displayNameHint': 'How others will see you',
       'continueWithGoogle': 'Continue with Google',
+      'continueWithApple': 'Continue with Apple',
       'or': 'or',
       'noAccount': "Don't have an account?",
       'haveAccount': 'Already have an account?',
@@ -241,6 +242,7 @@ class AppLocalizations {
       'displayName': 'Имя',
       'displayNameHint': 'Как вас будут видеть другие',
       'continueWithGoogle': 'Продолжить с Google',
+      'continueWithApple': 'Продолжить с Apple',
       'or': 'или',
       'noAccount': 'Нет аккаунта?',
       'haveAccount': 'Уже есть аккаунт?',
@@ -458,6 +460,7 @@ class AppLocalizations {
   String get displayName => get('displayName');
   String get displayNameHint => get('displayNameHint');
   String get continueWithGoogle => get('continueWithGoogle');
+  String get continueWithApple => get('continueWithApple');
   String get or => get('or');
   String get noAccount => get('noAccount');
   String get haveAccount => get('haveAccount');
