@@ -4,6 +4,8 @@ workflows:
     max_build_duration: 120
     instance_type: mac_mini_m2
     working_directory: qoomy
+    integrations:
+      app_store_connect: Qoomy API Key
     environment:
       flutter: stable
       xcode: latest
