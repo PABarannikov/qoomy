@@ -64,7 +64,7 @@ class TeamNotifier extends StateNotifier<AsyncValue<String?>> {
       return teamId;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return null;
+      rethrow; // Re-throw so the UI can display the actual error
     }
   }
 

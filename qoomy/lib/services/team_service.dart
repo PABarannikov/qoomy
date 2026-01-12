@@ -73,48 +73,44 @@ class TeamService {
   }
 
   Future<TeamModel?> getTeamByInviteCode(String inviteCode) async {
-    try {
-      final normalizedCode = inviteCode.toUpperCase().trim();
+    final normalizedCode = inviteCode.toUpperCase().trim();
 
-      // Try to find by inviteCode field first
-      var query = await _teamsCollection
-          .where('inviteCode', isEqualTo: normalizedCode)
-          .limit(1)
-          .get();
+    // Try to find by inviteCode field first
+    var query = await _teamsCollection
+        .where('inviteCode', isEqualTo: normalizedCode)
+        .limit(1)
+        .get();
 
-      // If not found, scan all teams (fallback for index issues)
-      if (query.docs.isEmpty) {
-        final allTeams = await _teamsCollection.get();
-        for (final doc in allTeams.docs) {
-          final data = doc.data();
-          if (data['inviteCode'] == normalizedCode) {
-            query = await _teamsCollection
-                .where(FieldPath.documentId, isEqualTo: doc.id)
-                .get();
-            break;
-          }
+    // If not found, scan all teams (fallback for index issues)
+    if (query.docs.isEmpty) {
+      final allTeams = await _teamsCollection.get();
+      for (final doc in allTeams.docs) {
+        final data = doc.data();
+        if (data['inviteCode'] == normalizedCode) {
+          query = await _teamsCollection
+              .where(FieldPath.documentId, isEqualTo: doc.id)
+              .get();
+          break;
         }
       }
-
-      if (query.docs.isEmpty) {
-        return null;
-      }
-
-      final doc = query.docs.first;
-      // Get members without ordering to avoid index requirement
-      final membersSnapshot = await _teamsCollection
-          .doc(doc.id)
-          .collection('members')
-          .get();
-
-      final members = membersSnapshot.docs
-          .map((doc) => TeamMember.fromFirestore(doc))
-          .toList();
-
-      return TeamModel.fromFirestore(doc, members);
-    } catch (e) {
-      rethrow;
     }
+
+    if (query.docs.isEmpty) {
+      return null;
+    }
+
+    final doc = query.docs.first;
+    // Get members without ordering to avoid index requirement
+    final membersSnapshot = await _teamsCollection
+        .doc(doc.id)
+        .collection('members')
+        .get();
+
+    final members = membersSnapshot.docs
+        .map((doc) => TeamMember.fromFirestore(doc))
+        .toList();
+
+    return TeamModel.fromFirestore(doc, members);
   }
 
   Stream<TeamModel?> teamStream(String teamId) {
@@ -204,7 +200,9 @@ class TeamService {
     required String userName,
   }) async {
     final team = await getTeamByInviteCode(inviteCode);
-    if (team == null) return null;
+    if (team == null) {
+      throw Exception('No team found with invite code: $inviteCode');
+    }
 
     final success = await joinTeam(
       teamId: team.id,
@@ -212,7 +210,11 @@ class TeamService {
       userName: userName,
     );
 
-    return success ? team.id : null;
+    if (!success) {
+      throw Exception('Failed to join team ${team.name}');
+    }
+
+    return team.id;
   }
 
   Future<void> leaveTeam(String teamId, String userId) async {

@@ -77,10 +77,16 @@ class _JoinTeamScreenState extends ConsumerState<JoinTeamScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
+      String errorMessage = e.toString();
+      // Clean up the error message
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring(11);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text(errorMessage),
           backgroundColor: QoomyTheme.errorColor,
+          duration: const Duration(seconds: 5),
         ),
       );
     }
