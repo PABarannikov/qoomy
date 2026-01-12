@@ -42,28 +42,44 @@ class _JoinTeamScreenState extends ConsumerState<JoinTeamScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final currentUser = ref.read(currentUserProvider).valueOrNull;
-    if (currentUser == null) return;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: User not logged in')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
-    final teamId = await ref.read(teamNotifierProvider.notifier).joinTeamByInviteCode(
-          inviteCode: _codeController.text.trim().toUpperCase(),
-          userId: currentUser.id,
-          userName: currentUser.displayName,
+    try {
+      final teamId = await ref.read(teamNotifierProvider.notifier).joinTeamByInviteCode(
+            inviteCode: _codeController.text.trim().toUpperCase(),
+            userId: currentUser.id,
+            userName: currentUser.displayName,
+          );
+
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      if (teamId != null) {
+        // Clear pending invite after successful join
+        ref.read(pendingTeamInviteProvider.notifier).state = null;
+        context.go('/teams/$teamId');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).teamNotFound),
+            backgroundColor: QoomyTheme.errorColor,
+          ),
         );
-
-    if (!mounted) return;
-
-    setState(() => _isLoading = false);
-
-    if (teamId != null) {
-      // Clear pending invite after successful join
-      ref.read(pendingTeamInviteProvider.notifier).state = null;
-      context.go('/teams/$teamId');
-    } else {
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context).teamNotFound),
+          content: Text('Error: $e'),
           backgroundColor: QoomyTheme.errorColor,
         ),
       );
