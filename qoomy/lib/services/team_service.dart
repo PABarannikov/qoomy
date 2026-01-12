@@ -63,8 +63,7 @@ class TeamService {
     final membersSnapshot = await _teamsCollection
         .doc(teamId)
         .collection('members')
-        .orderBy('joinedAt')
-        .get();
+                .get();
 
     final members = membersSnapshot.docs
         .map((doc) => TeamMember.fromFirestore(doc))
@@ -121,8 +120,7 @@ class TeamService {
       final membersSnapshot = await _teamsCollection
           .doc(teamId)
           .collection('members')
-          .orderBy('joinedAt')
-          .get();
+                    .get();
 
       final members = membersSnapshot.docs
           .map((doc) => TeamMember.fromFirestore(doc))
@@ -136,8 +134,7 @@ class TeamService {
     return _teamsCollection
         .doc(teamId)
         .collection('members')
-        .orderBy('joinedAt')
-        .snapshots()
+                .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => TeamMember.fromFirestore(doc)).toList());
   }
@@ -153,8 +150,7 @@ class TeamService {
         final membersSnapshot = await _teamsCollection
             .doc(doc.id)
             .collection('members')
-            .orderBy('joinedAt')
-            .get();
+                        .get();
 
         final members = membersSnapshot.docs
             .map((doc) => TeamMember.fromFirestore(doc))
