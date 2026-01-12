@@ -8,13 +8,20 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.qoomy.qoomy
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files com.qoomy.qoomy --type IOS_APP_STORE
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Build iOS
-        script: flutter build ios --release --no-codesign
+        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
-      - build/ios/archive/*.xcarchive
       - /tmp/xcodebuild_logs/*.log
-      - flutter_drive.log
