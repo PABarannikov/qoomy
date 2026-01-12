@@ -5,6 +5,8 @@
 !firebase.json
 !tsconfig.json
 !manifest.json
+!**/Assets.xcassets/**/Contents.json
+!firestore.indexes.json
 client_secret*.json
 *.jks
 key.properties
