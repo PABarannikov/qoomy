@@ -52,12 +52,15 @@ service cloud.firestore {
 
     // Teams collection
     match /teams/{teamId} {
-      // Anyone authenticated can read teams they are a member of (enforced by query)
+      // Anyone authenticated can read teams (needed for invite code lookup)
       allow read: if request.auth != null;
       // Only authenticated users can create teams
       allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
-      // Only owner can update team
-      allow update: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      // Owner can update anything, others can only add themselves to memberIds
+      allow update: if request.auth != null &&
+        (request.auth.uid == resource.data.ownerId ||
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']) &&
+          request.auth.uid in request.resource.data.memberIds));
       // Only owner can delete team
       allow delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
 
