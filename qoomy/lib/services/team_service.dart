@@ -101,10 +101,10 @@ class TeamService {
     }
 
     final doc = query.docs.first;
+    // Get members without ordering to avoid index requirement
     final membersSnapshot = await _teamsCollection
         .doc(doc.id)
         .collection('members')
-        .orderBy('joinedAt')
         .get();
 
     final members = membersSnapshot.docs
