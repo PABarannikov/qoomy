@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>338120090374-cmv8if92s6l3ol4f4evvjhocgf5c7a60.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.338120090374-cmv8if92s6l3ol4f4evvjhocgf5c7a60</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>338120090374-73e7u0ufvb7llhmdqbvq114ud7e6kss6.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCJ85LStHr8xaRjoByYc_0a1FjbFL0hdig</string>
+	<key>GCM_SENDER_ID</key>
+	<string>338120090374</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.qoomy.qoomy</string>
+	<key>PROJECT_ID</key>
+	<string>qoomy-quiz-game</string>
+	<key>STORAGE_BUCKET</key>
+	<string>qoomy-quiz-game.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:338120090374:ios:d8dbf3ee4dfecf0c64f487</string>
+</dict>
+</plist>
