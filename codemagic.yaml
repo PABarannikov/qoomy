@@ -13,6 +13,8 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.qoomy.qoomy
+      vars:
+        FIREBASE_IOS_API_KEY: AIzaSyCJ85LStHr8xaRjoByYc_0a1FjbFL0hdig
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
@@ -23,7 +25,7 @@ workflows:
           keychain add-certificates
           xcode-project use-profiles
       - name: Build iOS
-        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist --dart-define=FIREBASE_IOS_API_KEY=$FIREBASE_IOS_API_KEY
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
