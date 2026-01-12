@@ -130,19 +130,13 @@ class AuthService {
     final rawNonce = _generateNonce();
     final nonce = _sha256ofString(rawNonce);
 
-    // Request credentials from Apple
+    // Request credentials from Apple (native iOS - no webAuthenticationOptions needed)
     final appleCredential = await SignInWithApple.getAppleIDCredential(
       scopes: [
         AppleIDAuthorizationScopes.email,
         AppleIDAuthorizationScopes.fullName,
       ],
       nonce: nonce,
-      webAuthenticationOptions: WebAuthenticationOptions(
-        clientId: 'com.qoomy.qoomy.service',
-        redirectUri: Uri.parse(
-          'https://qoomy-quiz-game.firebaseapp.com/__/auth/handler',
-        ),
-      ),
     );
 
     // Create OAuth credential
