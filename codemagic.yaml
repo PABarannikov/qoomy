@@ -5,7 +5,7 @@ workflows:
     instance_type: mac_mini_m2
     working_directory: qoomy
     integrations:
-      app_store_connect: Qoomy API Key
+      app_store_connect: Codemagic
     environment:
       flutter: stable
       xcode: latest
