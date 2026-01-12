@@ -137,6 +137,12 @@ class AuthService {
         AppleIDAuthorizationScopes.fullName,
       ],
       nonce: nonce,
+      webAuthenticationOptions: WebAuthenticationOptions(
+        clientId: 'com.qoomy.qoomy.service',
+        redirectUri: Uri.parse(
+          'https://qoomy-quiz-game.firebaseapp.com/__/auth/handler',
+        ),
+      ),
     );
 
     // Create OAuth credential

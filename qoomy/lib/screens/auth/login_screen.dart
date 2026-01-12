@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -201,15 +202,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       label: Text(l10n.continueWithGoogle),
                     ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: isLoading ? null : _signInWithApple,
-                      icon: const Icon(Icons.apple, size: 24),
-                      label: Text(l10n.continueWithApple),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.black,
+                    // Apple Sign-In only on iOS and Web (not supported on Android)
+                    if (kIsWeb || Platform.isIOS) ...[
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: isLoading ? null : _signInWithApple,
+                        icon: const Icon(Icons.apple, size: 24),
+                        label: Text(l10n.continueWithApple),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.black,
+                        ),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,

@@ -11,9 +11,14 @@ void main() async {
   // Use path-based URLs for web (e.g., /join-team/CODE instead of /#/join-team/CODE)
   usePathUrlStrategy();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Initialize Firebase (handle case where it's already initialized on Android)
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    // Firebase already initialized (can happen on Android with google-services)
+  }
 
   runApp(
     const ProviderScope(

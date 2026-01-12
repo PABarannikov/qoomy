@@ -6,6 +6,8 @@
 !tsconfig.json
 !manifest.json
 client_secret*.json
+*.jks
+key.properties
 
 # Flutter/Dart
 .dart_tool/

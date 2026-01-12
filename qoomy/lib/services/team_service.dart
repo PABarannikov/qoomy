@@ -74,12 +74,31 @@ class TeamService {
   }
 
   Future<TeamModel?> getTeamByInviteCode(String inviteCode) async {
-    final query = await _teamsCollection
-        .where('inviteCode', isEqualTo: inviteCode.toUpperCase())
+    final normalizedCode = inviteCode.toUpperCase().trim();
+
+    // Try to find by inviteCode field first
+    var query = await _teamsCollection
+        .where('inviteCode', isEqualTo: normalizedCode)
         .limit(1)
         .get();
 
-    if (query.docs.isEmpty) return null;
+    // If not found, scan all teams (fallback for index issues)
+    if (query.docs.isEmpty) {
+      final allTeams = await _teamsCollection.get();
+      for (final doc in allTeams.docs) {
+        final data = doc.data();
+        if (data['inviteCode'] == normalizedCode) {
+          query = await _teamsCollection
+              .where(FieldPath.documentId, isEqualTo: doc.id)
+              .get();
+          break;
+        }
+      }
+    }
+
+    if (query.docs.isEmpty) {
+      return null;
+    }
 
     final doc = query.docs.first;
     final membersSnapshot = await _teamsCollection

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 1024px;
+            height: 500px;
+            background: linear-gradient(135deg, #9D7BFF 0%, #7C4DFF 50%, #5E35B1 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+        }
+        .logo {
+            width: 180px;
+            height: 180px;
+            background: white;
+            border-radius: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .logo img {
+            width: 140px;
+            height: 140px;
+        }
+        .text {
+            color: white;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .title {
+            font-size: 72px;
+            font-weight: 700;
+            letter-spacing: -2px;
+            margin-bottom: 10px;
+        }
+        .tagline {
+            font-size: 28px;
+            font-weight: 400;
+            opacity: 0.95;
+        }
+        .decorations {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+        }
+        .c1 { width: 300px; height: 300px; top: -100px; right: -50px; }
+        .c2 { width: 200px; height: 200px; bottom: -80px; left: -60px; }
+        .c3 { width: 150px; height: 150px; top: 50%; right: 10%; }
+    </style>
+</head>
+<body>
+    <div class="decorations">
+        <div class="circle c1"></div>
+        <div class="circle c2"></div>
+        <div class="circle c3"></div>
+    </div>
+    <div class="container">
+        <div class="logo">
+            <img src="qoomy_icon.png" alt="Qoomy">
+        </div>
+        <div class="text">
+            <div class="title">Qoomy</div>
+            <div class="tagline">Real-time multiplayer quiz game</div>
+        </div>
+    </div>
+</body>
+</html>
