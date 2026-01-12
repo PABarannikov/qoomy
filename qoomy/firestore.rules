@@ -6,6 +6,18 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
+
+      // roomReads subcollection - tracks when user last read a room's chat
+      match /roomReads/{roomCode} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // roomReveals subcollection - tracks which rooms user has revealed answer for
+      match /roomReveals/{roomCode} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // Rooms collection
@@ -22,10 +34,58 @@ service cloud.firestore {
         allow read: if request.auth != null;
         allow create: if request.auth != null && request.auth.uid == playerId;
         allow update: if request.auth != null;
-        allow delete: if request.auth != null && 
-          (request.auth.uid == playerId || 
+        allow delete: if request.auth != null &&
+          (request.auth.uid == playerId ||
            request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomCode)).data.hostId);
       }
+
+      // Chat subcollection
+      match /chat/{messageId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null;
+        allow update: if request.auth != null &&
+          request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomCode)).data.hostId;
+        allow delete: if request.auth != null &&
+          request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomCode)).data.hostId;
+      }
+    }
+
+    // Teams collection
+    match /teams/{teamId} {
+      // Anyone authenticated can read teams they are a member of (enforced by query)
+      allow read: if request.auth != null;
+      // Only authenticated users can create teams
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+      // Only owner can update team
+      allow update: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      // Only owner can delete team
+      allow delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+
+      // Members subcollection
+      match /members/{memberId} {
+        allow read: if request.auth != null;
+        // User can add themselves (joining) or owner can add members
+        allow create: if request.auth != null &&
+          (request.auth.uid == memberId ||
+           request.auth.uid == get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId);
+        // Owner can update members
+        allow update: if request.auth != null &&
+          request.auth.uid == get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId;
+        // User can remove themselves or owner can remove members
+        allow delete: if request.auth != null &&
+          (request.auth.uid == memberId ||
+           request.auth.uid == get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId);
+      }
+    }
+
+    // Collection group rules for players (for userJoinedRoomsStream query)
+    match /{path=**}/players/{playerId} {
+      allow read: if request.auth != null;
+    }
+
+    // Collection group rules for chat (for stats queries)
+    match /{path=**}/chat/{messageId} {
+      allow read: if request.auth != null;
     }
 
     // Games collection
@@ -43,9 +103,11 @@ service cloud.firestore {
         // Answers subcollection
         match /answers/{playerId} {
           allow read: if request.auth != null;
-          allow create: if request.auth != null && request.auth.uid == playerId;
-          allow update: if request.auth != null && 
-            (request.auth.uid == playerId || 
+          allow create, update: if request.auth != null && request.auth.uid == playerId;
+          allow update: if request.auth != null &&
+             request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomCode)).data.hostId;
+          allow delete: if request.auth != null &&
+            (request.auth.uid == playerId ||
              request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomCode)).data.hostId);
         }
       }
