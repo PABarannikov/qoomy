@@ -492,11 +492,6 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
               child: Text(message.text, style: const TextStyle(fontSize: 15)),
             ),
 
-            // AI reasoning (shown after AI marks the answer)
-            if (isAiMode && isAnswer && isMarked && message.aiReasoning != null) ...[
-              const SizedBox(height: 6),
-              _buildAiReasoningBadge(message),
-            ],
 
             // Mark buttons for answers (only in manual mode)
             if (!isAiMode && isAnswer && !isMarked) ...[
@@ -557,36 +552,6 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
           ],
         ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildAiReasoningBadge(ChatMessage message) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.deepPurple.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.smart_toy,
-            size: 14,
-            color: Colors.deepPurple,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              message.aiReasoning!,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.deepPurple.shade700,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -438,34 +438,6 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                           ),
                         ],
                       ),
-                      // AI reasoning (only for correct answers)
-                      if (isAiMode && message.isCorrect! && message.aiReasoning != null) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.deepPurple.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.smart_toy, size: 12, color: Colors.deepPurple),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  message.aiReasoning!,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.deepPurple.shade700,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ],
                   ],
                 ),
