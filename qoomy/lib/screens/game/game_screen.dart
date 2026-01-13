@@ -1045,7 +1045,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                           child: TextField(
                             controller: _messageController,
                             decoration: InputDecoration(
-                              hintText: l10n.typeMessage,
+                              hintText: cannotAnswer ? l10n.typeMessageOnly : l10n.typeMessage,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(24),
                                 borderSide: BorderSide.none,
@@ -1063,7 +1063,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       : TextField(
                           controller: _messageController,
                           decoration: InputDecoration(
-                            hintText: l10n.typeMessage,
+                            hintText: cannotAnswer ? l10n.typeMessageOnly : l10n.typeMessage,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(24),
                               borderSide: BorderSide.none,

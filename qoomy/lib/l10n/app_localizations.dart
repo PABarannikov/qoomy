@@ -114,6 +114,7 @@ class AppLocalizations {
       'typeAnswer': 'Type your answer...',
       'typeComment': 'Type a comment...',
       'typeMessage': 'Message/answer...',
+      'typeMessageOnly': 'Message...',
       'answerLabel': 'Answer',
       'giveAnswer': 'Give answer!',
       'comment': 'Comment',
@@ -330,6 +331,7 @@ class AppLocalizations {
       'typeAnswer': 'Введите ответ...',
       'typeComment': 'Введите комментарий...',
       'typeMessage': 'Сообщение/ответ...',
+      'typeMessageOnly': 'Сообщение...',
       'answerLabel': 'Ответ',
       'giveAnswer': 'Дать ответ!',
       'comment': 'Комментарий',
@@ -535,6 +537,7 @@ class AppLocalizations {
   String get typeAnswer => get('typeAnswer');
   String get typeComment => get('typeComment');
   String get typeMessage => get('typeMessage');
+  String get typeMessageOnly => get('typeMessageOnly');
   String get answerLabel => get('answerLabel');
   String get giveAnswer => get('giveAnswer');
   String get comment => get('comment');
