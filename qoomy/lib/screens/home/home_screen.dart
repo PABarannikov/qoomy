@@ -244,13 +244,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               allRooms = allRooms.where((e) => !e.value).toList();
             }
 
-            // Apply status filter
-            if (_statusFilter == StatusFilter.active) {
-              allRooms = allRooms.where((e) => e.key.status != RoomStatus.finished).toList();
-            }
-
-            // Note: Unread filter is applied in the UI by checking unreadCountProvider for each room
-            // The filter just hides rooms with 0 unread count when enabled
+            // Note: Status filter (active) is applied in _buildRoomCard by checking hasCorrectAnswerProvider
+            // Note: Unread filter is applied in _buildRoomCard by checking unreadCountProvider
 
             allRooms.sort((a, b) => b.key.createdAt.compareTo(a.key.createdAt));
 
@@ -325,6 +320,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     } else {
       statusColor = Colors.orange;
       statusText = l10n.waiting;
+    }
+
+    // Apply active filter: hide rooms that have a correct answer or are finished
+    if (_statusFilter == StatusFilter.active) {
+      final hasCorrect = hasCorrectAnswerAsync.valueOrNull ?? false;
+      if (hasCorrect || room.status == RoomStatus.finished) {
+        return const SizedBox.shrink();
+      }
     }
 
     // Apply unread filter: hide rooms with 0 unread when filter is active
