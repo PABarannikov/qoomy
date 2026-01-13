@@ -33,33 +33,40 @@ exports.evaluateAnswer = functions.https.onCall(async (data, context) => {
 
     const anthropic = new Anthropic({ apiKey });
 
-    const prompt = `You are a strict quiz answer evaluator. Your job is to check if the player's answer is correct.
+    const prompt = `You are a quiz answer evaluator. Your job is to check if the player's answer is correct.
 
 Question: ${question}
 Correct Answer: ${correctAnswer}
 Player's Answer: ${playerAnswer}
 
-STEP 1 - COUNT WORDS (DO THIS FIRST):
-Count meaningful words in the correct answer (exclude: the, a, an).
-Count meaningful words in the player's answer (exclude: the, a, an).
+STEP 1 - VERIFY ANSWER FITS THE QUESTION:
+First, check if the player's answer logically fits the question being asked.
+- If question asks for a person/character and answer is a person/character → OK
+- If question asks for a place and answer is a place → OK
+- If answer doesn't fit the question type at all → return isCorrect: false
 
-STEP 2 - CHECK WORD COUNT RULE:
-If correct answer has 2+ words AND player answer has only 1 word → IMMEDIATELY return isCorrect: false
-NO EXCEPTIONS. Even if the single word is semantically related, it is WRONG.
+STEP 2 - CHECK FOR CHARACTER/PERSON ALIASES:
+If the answer refers to a person, character, or entity, check if the player's answer is an ALTERNATIVE NAME for the same person/character.
+- Birth name = Title/Known name (e.g., "Эдмонд Дантес" = "Граф Монте-Кристо", "Дантес" = "Монте-Кристо")
+- Pen name, stage name, nickname, maiden name = Real name
+- If they refer to the SAME person/character → return isCorrect: true (word count doesn't matter for aliases!)
 
-Examples that MUST be marked WRONG:
-- "Отряд самоубийц" (2 words) → "suicide" (1 word) = WRONG
-- "Отряд самоубийц" (2 words) → "Suicide" (1 word) = WRONG
-- "Отряд самоубийц" (2 words) → "squad" (1 word) = WRONG
-- "Suicide Squad" (2 words) → "Suicide" (1 word) = WRONG
-- "Eiffel Tower" (2 words) → "Tower" (1 word) = WRONG
+Examples that ARE CORRECT (same person):
+- "Граф Монте-Кристо" → "Дантес" = CORRECT (same character)
+- "Граф Монте-Кристо" → "Эдмонд Дантес" = CORRECT (same character)
+- "Марк Твен" → "Сэмюэл Клеменс" = CORRECT (same person)
 
-STEP 3 - If word count is OK, then check if meaning matches:
+STEP 3 - If NOT a person/character alias, then apply word count rule:
+If correct answer has 2+ words AND player answer has only 1 word AND it's NOT an alternative name for the same entity → return isCorrect: false
+
+Examples that are WRONG (partial answers, not aliases):
+- "Отряд самоубийц" → "suicide" = WRONG (just part of the title, not an alias)
+- "Suicide Squad" → "Suicide" = WRONG (just part of the title)
+- "Eiffel Tower" → "Tower" = WRONG (incomplete answer)
+
+STEP 4 - If word count is OK, check if meaning matches:
 - Allow spelling mistakes, synonyms, translations, transliterations
-- "Отряд самоубийц" = "Suicide Squad" (both 2 words, same meaning) = CORRECT
-- Allow character aliases and alternative names (birth name = title/known name)
-- Examples: "Эдмонд Дантес" = "Граф Монте-Кристо" (same character), "Дантес" = "Монте-Кристо"
-- The same person/character referred to by a different name (pen name, stage name, nickname, title) = CORRECT
+- "Отряд самоубийц" = "Suicide Squad" = CORRECT
 
 Respond in JSON format only:
 {
@@ -135,33 +142,40 @@ exports.onAnswerSubmitted = functions.firestore
 
       const anthropic = new Anthropic({ apiKey });
 
-      const prompt = `You are a strict quiz answer evaluator. Your job is to check if the player's answer is correct.
+      const prompt = `You are a quiz answer evaluator. Your job is to check if the player's answer is correct.
 
 Question: ${room.question}
 Correct Answer: ${room.answer}
 Player's Answer: ${message.text}
 
-STEP 1 - COUNT WORDS (DO THIS FIRST):
-Count meaningful words in the correct answer (exclude: the, a, an).
-Count meaningful words in the player's answer (exclude: the, a, an).
+STEP 1 - VERIFY ANSWER FITS THE QUESTION:
+First, check if the player's answer logically fits the question being asked.
+- If question asks for a person/character and answer is a person/character → OK
+- If question asks for a place and answer is a place → OK
+- If answer doesn't fit the question type at all → return isCorrect: false
 
-STEP 2 - CHECK WORD COUNT RULE:
-If correct answer has 2+ words AND player answer has only 1 word → IMMEDIATELY return isCorrect: false
-NO EXCEPTIONS. Even if the single word is semantically related, it is WRONG.
+STEP 2 - CHECK FOR CHARACTER/PERSON ALIASES:
+If the answer refers to a person, character, or entity, check if the player's answer is an ALTERNATIVE NAME for the same person/character.
+- Birth name = Title/Known name (e.g., "Эдмонд Дантес" = "Граф Монте-Кристо", "Дантес" = "Монте-Кристо")
+- Pen name, stage name, nickname, maiden name = Real name
+- If they refer to the SAME person/character → return isCorrect: true (word count doesn't matter for aliases!)
 
-Examples that MUST be marked WRONG:
-- "Отряд самоубийц" (2 words) → "suicide" (1 word) = WRONG
-- "Отряд самоубийц" (2 words) → "Suicide" (1 word) = WRONG
-- "Отряд самоубийц" (2 words) → "squad" (1 word) = WRONG
-- "Suicide Squad" (2 words) → "Suicide" (1 word) = WRONG
-- "Eiffel Tower" (2 words) → "Tower" (1 word) = WRONG
+Examples that ARE CORRECT (same person):
+- "Граф Монте-Кристо" → "Дантес" = CORRECT (same character)
+- "Граф Монте-Кристо" → "Эдмонд Дантес" = CORRECT (same character)
+- "Марк Твен" → "Сэмюэл Клеменс" = CORRECT (same person)
 
-STEP 3 - If word count is OK, then check if meaning matches:
+STEP 3 - If NOT a person/character alias, then apply word count rule:
+If correct answer has 2+ words AND player answer has only 1 word AND it's NOT an alternative name for the same entity → return isCorrect: false
+
+Examples that are WRONG (partial answers, not aliases):
+- "Отряд самоубийц" → "suicide" = WRONG (just part of the title, not an alias)
+- "Suicide Squad" → "Suicide" = WRONG (just part of the title)
+- "Eiffel Tower" → "Tower" = WRONG (incomplete answer)
+
+STEP 4 - If word count is OK, check if meaning matches:
 - Allow spelling mistakes, synonyms, translations, transliterations
-- "Отряд самоубийц" = "Suicide Squad" (both 2 words, same meaning) = CORRECT
-- Allow character aliases and alternative names (birth name = title/known name)
-- Examples: "Эдмонд Дантес" = "Граф Монте-Кристо" (same character), "Дантес" = "Монте-Кристо"
-- The same person/character referred to by a different name (pen name, stage name, nickname, title) = CORRECT
+- "Отряд самоубийц" = "Suicide Squad" = CORRECT
 
 Respond in JSON format only:
 {
