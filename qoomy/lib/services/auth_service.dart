@@ -25,10 +25,26 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
 
   Future<UserCredential> signInWithEmail(String email, String password) async {
-    return await _auth.signInWithEmailAndPassword(
+    final userCredential = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
+
+    // Ensure user document exists (for users created before this check was added)
+    final userDoc = await _firestore
+        .collection('users')
+        .doc(userCredential.user!.uid)
+        .get();
+
+    if (!userDoc.exists) {
+      await _createUserDocument(
+        userCredential.user!.uid,
+        userCredential.user!.email ?? email,
+        userCredential.user!.displayName ?? 'Player',
+      );
+    }
+
+    return userCredential;
   }
 
   Future<UserCredential> signUpWithEmail(
