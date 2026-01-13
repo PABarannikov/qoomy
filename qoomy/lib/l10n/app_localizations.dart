@@ -407,7 +407,7 @@ class AppLocalizations {
       'noMatchingQuestions': 'Нет подходящих вопросов',
       'allQuestions': 'Все вопросы',
       'hostQuestions': 'Мои вопросы',
-      'playerQuestions': 'Вопросы с моими ответами',
+      'playerQuestions': 'Чужие вопросы',
       'activeOnly': 'Активные',
       'unreadOnly': 'Непрочитанные',
 
