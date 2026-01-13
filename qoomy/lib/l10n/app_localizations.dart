@@ -177,6 +177,12 @@ class AppLocalizations {
       'active': 'Active',
       'unread': 'Unread',
       'noMatchingQuestions': 'No matching questions',
+      'filteringBy': 'Showing:',
+      'allQuestions': 'All questions',
+      'hostQuestions': 'My questions (as host)',
+      'playerQuestions': 'Questions I answered',
+      'activeOnly': 'Active only',
+      'unreadOnly': 'With unread messages',
 
       // Teams
       'teams': 'Teams',
@@ -400,6 +406,12 @@ class AppLocalizations {
       'active': 'Активные',
       'unread': 'Непрочитанные',
       'noMatchingQuestions': 'Нет подходящих вопросов',
+      'filteringBy': 'Показаны:',
+      'allQuestions': 'Все вопросы',
+      'hostQuestions': 'Мои вопросы (ведущий)',
+      'playerQuestions': 'Вопросы с моими ответами',
+      'activeOnly': 'Только активные',
+      'unreadOnly': 'С непрочитанными',
 
       // Teams
       'teams': 'Команды',
@@ -655,6 +667,12 @@ class AppLocalizations {
   String get totalPoints => get('totalPoints');
   String get notLoggedIn => get('notLoggedIn');
   String get confirmLogout => get('confirmLogout');
+  String get filteringBy => get('filteringBy');
+  String get allQuestions => get('allQuestions');
+  String get hostQuestions => get('hostQuestions');
+  String get playerQuestions => get('playerQuestions');
+  String get activeOnly => get('activeOnly');
+  String get unreadOnly => get('unreadOnly');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
