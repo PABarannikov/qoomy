@@ -38,9 +38,11 @@ Respond with JSON only in this format:
 
 Be lenient with:
 - Spelling variations
-- Synonyms  
+- Synonyms
 - Different phrasing
 - Abbreviations
+- Character aliases and alternative names (e.g., "Edmond Dantès" = "Count of Monte Cristo", birth name = title/known name)
+- The same person, character, or entity referred to by a different name (maiden name, pen name, stage name, nickname, title, etc.)
 
 Be strict about:
 - Fundamentally wrong answers

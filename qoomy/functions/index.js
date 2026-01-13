@@ -57,6 +57,9 @@ Examples that MUST be marked WRONG:
 STEP 3 - If word count is OK, then check if meaning matches:
 - Allow spelling mistakes, synonyms, translations, transliterations
 - "Отряд самоубийц" = "Suicide Squad" (both 2 words, same meaning) = CORRECT
+- Allow character aliases and alternative names (birth name = title/known name)
+- Examples: "Эдмонд Дантес" = "Граф Монте-Кристо" (same character), "Дантес" = "Монте-Кристо"
+- The same person/character referred to by a different name (pen name, stage name, nickname, title) = CORRECT
 
 Respond in JSON format only:
 {
@@ -156,6 +159,9 @@ Examples that MUST be marked WRONG:
 STEP 3 - If word count is OK, then check if meaning matches:
 - Allow spelling mistakes, synonyms, translations, transliterations
 - "Отряд самоубийц" = "Suicide Squad" (both 2 words, same meaning) = CORRECT
+- Allow character aliases and alternative names (birth name = title/known name)
+- Examples: "Эдмонд Дантес" = "Граф Монте-Кристо" (same character), "Дантес" = "Монте-Кристо"
+- The same person/character referred to by a different name (pen name, stage name, nickname, title) = CORRECT
 
 Respond in JSON format only:
 {
