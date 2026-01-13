@@ -98,6 +98,9 @@ class AppLocalizations {
       // Join room
       'enterRoomCode': 'Enter Room Code',
       'roomCodeHint': 'e.g. ABC123',
+      'askHostForCode': 'Ask the host for the 6-character room code',
+      'roomCodeMustBe6Chars': 'Room code must be 6 characters',
+      'failedToJoinRoom': 'Failed to join room. Check the code and try again.',
       'join': 'Join',
       'joining': 'Joining...',
       'enterCode': 'Please enter a room code',
@@ -311,6 +314,9 @@ class AppLocalizations {
       // Join room
       'enterRoomCode': 'Введите код комнаты',
       'roomCodeHint': 'например ABC123',
+      'askHostForCode': 'Спросите код из 6 символов у ведущего',
+      'roomCodeMustBe6Chars': 'Код комнаты должен быть 6 символов',
+      'failedToJoinRoom': 'Не удалось войти. Проверьте код и попробуйте снова.',
       'join': 'Войти',
       'joining': 'Вход...',
       'enterCode': 'Введите код комнаты',
@@ -515,6 +521,9 @@ class AppLocalizations {
   String get enterAnswer => get('enterAnswer');
   String get enterRoomCode => get('enterRoomCode');
   String get roomCodeHint => get('roomCodeHint');
+  String get askHostForCode => get('askHostForCode');
+  String get roomCodeMustBe6Chars => get('roomCodeMustBe6Chars');
+  String get failedToJoinRoom => get('failedToJoinRoom');
   String get join => get('join');
   String get joining => get('joining');
   String get enterCode => get('enterCode');
