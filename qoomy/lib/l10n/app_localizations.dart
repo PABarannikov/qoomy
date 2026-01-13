@@ -40,6 +40,12 @@ class AppLocalizations {
       'enterEmail': 'Please enter your email',
       'validEmail': 'Please enter a valid email',
       'enterPassword': 'Please enter your password',
+      'forgotPassword': 'Forgot password?',
+      'resetPassword': 'Reset Password',
+      'resetPasswordInstructions': 'Enter your email address and we will send you a link to reset your password.',
+      'sendResetLink': 'Send Reset Link',
+      'resetLinkSent': 'Password reset link has been sent to your email',
+      'resetLinkError': 'Failed to send reset link. Please check your email address.',
       'enterName': 'Please enter your name',
       'nameTooShort': 'Name must be at least 2 characters',
       'passwordTooShort': 'Password must be at least 6 characters',
@@ -257,6 +263,12 @@ class AppLocalizations {
       'enterEmail': 'Введите email',
       'validEmail': 'Введите корректный email',
       'enterPassword': 'Введите пароль',
+      'forgotPassword': 'Забыли пароль?',
+      'resetPassword': 'Сброс пароля',
+      'resetPasswordInstructions': 'Введите ваш email и мы отправим вам ссылку для сброса пароля.',
+      'sendResetLink': 'Отправить ссылку',
+      'resetLinkSent': 'Ссылка для сброса пароля отправлена на ваш email',
+      'resetLinkError': 'Не удалось отправить ссылку. Проверьте email.',
       'enterName': 'Введите имя',
       'nameTooShort': 'Имя должно быть минимум 2 символа',
       'passwordTooShort': 'Пароль должен быть минимум 6 символов',
@@ -477,6 +489,12 @@ class AppLocalizations {
   String get enterEmail => get('enterEmail');
   String get validEmail => get('validEmail');
   String get enterPassword => get('enterPassword');
+  String get forgotPassword => get('forgotPassword');
+  String get resetPassword => get('resetPassword');
+  String get resetPasswordInstructions => get('resetPasswordInstructions');
+  String get sendResetLink => get('sendResetLink');
+  String get resetLinkSent => get('resetLinkSent');
+  String get resetLinkError => get('resetLinkError');
   String get enterName => get('enterName');
   String get nameTooShort => get('nameTooShort');
   String get passwordTooShort => get('passwordTooShort');

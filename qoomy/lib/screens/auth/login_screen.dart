@@ -46,6 +46,88 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await ref.read(authNotifierProvider.notifier).signInWithApple();
   }
 
+  Future<void> _showForgotPasswordDialog() async {
+    final l10n = AppLocalizations.of(context);
+    final emailController = TextEditingController(text: _emailController.text);
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.resetPassword),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.resetPasswordInstructions),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: l10n.email,
+                  prefixIcon: const Icon(Icons.email_outlined),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return l10n.enterEmail;
+                  }
+                  if (!value.contains('@')) {
+                    return l10n.validEmail;
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.of(context).pop(true);
+              }
+            },
+            child: Text(l10n.sendResetLink),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      try {
+        await ref.read(authNotifierProvider.notifier).resetPassword(
+              emailController.text.trim(),
+            );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.resetLinkSent),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.resetLinkError),
+              backgroundColor: QoomyTheme.errorColor,
+            ),
+          );
+        }
+      }
+    }
+
+    emailController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
@@ -163,7 +245,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _showForgotPasswordDialog,
+                        child: Text(l10n.forgotPassword),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     ElevatedButton(
                       onPressed: isLoading ? null : _signIn,
                       child: isLoading
