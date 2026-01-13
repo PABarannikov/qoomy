@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:math';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,7 +12,13 @@ import 'package:qoomy/models/user_model.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  // iOS requires the client ID from GoogleService-Info.plist
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: !kIsWeb && Platform.isIOS
+        ? '338120090374-cmv8if92s6l3ol4f4evvjhocgf5c7a60.apps.googleusercontent.com'
+        : null,
+  );
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 

@@ -1,7 +1,7 @@
 name: qoomy
 description: "Qoomy - Real-time multiplayer quiz game"
 publish_to: 'none'
-version: 1.0.0+11
+version: 1.0.0+12
 
 environment:
   sdk: ^3.5.4
