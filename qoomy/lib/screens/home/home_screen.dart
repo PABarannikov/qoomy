@@ -167,7 +167,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       parts.add(l10n.unreadOnly.toLowerCase());
     }
 
-    return '${l10n.filteringBy} ${parts.join(', ')}';
+    return parts.join(', ');
   }
 
   Widget _buildIconFilterChip({
