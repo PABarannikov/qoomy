@@ -34,6 +34,11 @@ final unreadCountProvider = StreamProvider.family<int, ({String roomCode, String
   return ref.watch(roomServiceProvider).unreadCountStream(params.roomCode, params.userId);
 });
 
+/// Provider for total unread message count across all user's rooms
+final totalUnreadCountProvider = StreamProvider.family<int, String>((ref, userId) {
+  return ref.watch(roomServiceProvider).totalUnreadCountStream(userId);
+});
+
 /// Provider to check if a room has at least one correct answer
 final hasCorrectAnswerProvider = StreamProvider.family<bool, String>((ref, roomCode) {
   return ref.watch(roomServiceProvider).hasCorrectAnswerStream(roomCode);

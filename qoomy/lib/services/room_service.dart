@@ -430,15 +430,23 @@ class RoomService {
     void recalculateCount() {
       if (latestChatDocs == null) return;
 
-      int count;
+      int count = 0;
       if (latestLastReadAt == null) {
-        count = latestChatDocs!.length;
+        // Count all messages NOT sent by this user
+        for (final doc in latestChatDocs!) {
+          final data = doc.data() as Map<String, dynamic>;
+          final playerId = data['playerId'] as String?;
+          if (playerId != userId) {
+            count++;
+          }
+        }
       } else {
-        count = 0;
+        // Count messages after lastReadAt NOT sent by this user
         for (final doc in latestChatDocs!) {
           final data = doc.data() as Map<String, dynamic>;
           final sentAt = (data['sentAt'] as Timestamp?)?.toDate();
-          if (sentAt != null && sentAt.isAfter(latestLastReadAt!)) {
+          final playerId = data['playerId'] as String?;
+          if (sentAt != null && sentAt.isAfter(latestLastReadAt!) && playerId != userId) {
             count++;
           }
         }
@@ -588,5 +596,71 @@ class RoomService {
         .doc(roomCode)
         .snapshots()
         .map((doc) => doc.exists);
+  }
+
+  /// Stream of total unread message count across all user's rooms
+  Stream<int> totalUnreadCountStream(String userId) {
+    final controller = StreamController<int>.broadcast();
+    final roomUnreadCounts = <String, int>{};
+    final subscriptions = <StreamSubscription>[];
+    Set<String> currentRoomCodes = {};
+
+    void emitTotal() {
+      final total = roomUnreadCounts.values.fold<int>(0, (sum, count) => sum + count);
+      controller.add(total);
+    }
+
+    void subscribeToRoom(String roomCode) {
+      if (roomUnreadCounts.containsKey(roomCode)) return;
+
+      roomUnreadCounts[roomCode] = 0;
+      final sub = unreadCountStream(roomCode, userId).listen((count) {
+        roomUnreadCounts[roomCode] = count;
+        emitTotal();
+      });
+      subscriptions.add(sub);
+    }
+
+    void updateRooms(List<RoomModel> rooms) {
+      final newRoomCodes = rooms.map((r) => r.code).toSet();
+
+      // Remove rooms that no longer exist
+      for (final code in currentRoomCodes.difference(newRoomCodes)) {
+        roomUnreadCounts.remove(code);
+      }
+
+      // Add new rooms
+      for (final room in rooms) {
+        subscribeToRoom(room.code);
+      }
+
+      currentRoomCodes = newRoomCodes;
+      emitTotal();
+    }
+
+    // Listen to hosted rooms
+    final hostedSub = userHostedRoomsStream(userId).listen((rooms) {
+      for (final room in rooms) {
+        subscribeToRoom(room.code);
+      }
+    });
+    subscriptions.add(hostedSub);
+
+    // Listen to joined rooms
+    final joinedSub = userJoinedRoomsStream(userId).listen((rooms) {
+      for (final room in rooms) {
+        subscribeToRoom(room.code);
+      }
+    });
+    subscriptions.add(joinedSub);
+
+    controller.onCancel = () {
+      for (final sub in subscriptions) {
+        sub.cancel();
+      }
+      controller.close();
+    };
+
+    return controller.stream;
   }
 }

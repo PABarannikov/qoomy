@@ -5,14 +5,32 @@ import 'package:qoomy/config/router.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
 import 'package:qoomy/providers/locale_provider.dart';
+import 'package:qoomy/providers/auth_provider.dart';
+import 'package:qoomy/providers/room_provider.dart';
+import 'package:qoomy/services/badge_service.dart';
 
-class QoomyApp extends ConsumerWidget {
+class QoomyApp extends ConsumerStatefulWidget {
   const QoomyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<QoomyApp> createState() => _QoomyAppState();
+}
+
+class _QoomyAppState extends ConsumerState<QoomyApp> {
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final locale = ref.watch(localeProvider);
+
+    // Watch current user and sync badge count with unread messages
+    final currentUser = ref.watch(currentUserProvider);
+    currentUser.whenData((user) {
+      if (user != null) {
+        // Initialize badge sync for logged in user
+        ref.watch(badgeSyncProvider(user.id));
+      }
+    });
 
     return MaterialApp.router(
       title: 'Qoomy',

@@ -8,7 +8,6 @@ import 'package:qoomy/providers/locale_provider.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/widgets/common/qoomy_logo.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
-
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -160,8 +159,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   child: Row(
                     children: [
-                      const SizedBox(width: 48), // Placeholder for back button
-                      const Spacer(),
                       const Spacer(),
                       // Language toggle
                       IconButton(
