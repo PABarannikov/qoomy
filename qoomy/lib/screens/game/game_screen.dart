@@ -300,32 +300,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   l10n.question,
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
-                // Team badge
-                if (room.teamName != null) ...[
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.group, color: Colors.white, size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          room.teamName!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
                 const Spacer(),
                 if (isCollapsible)
                   IconButton(
@@ -343,6 +317,32 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   ),
               ],
             ),
+            // Team name on new line
+            if (room.teamName != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.group, color: Colors.white, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      room.teamName!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             // Scrollable content area for question text and image
             AnimatedSize(
