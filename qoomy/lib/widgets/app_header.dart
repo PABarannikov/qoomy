@@ -15,6 +15,8 @@ class AppHeader extends ConsumerWidget {
   final bool showTeamsButton;
   final List<PopupMenuEntry<String>>? extraMenuItems;
   final void Function(String)? onMenuItemSelected;
+  final Widget? trailing;
+  final double? maxWidth;
 
   const AppHeader({
     super.key,
@@ -26,6 +28,8 @@ class AppHeader extends ConsumerWidget {
     this.showTeamsButton = false,
     this.extraMenuItems,
     this.onMenuItemSelected,
+    this.trailing,
+    this.maxWidth,
   });
 
   @override
@@ -35,7 +39,7 @@ class AppHeader extends ConsumerWidget {
 
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: QoomyTheme.maxContentWidth),
+        constraints: BoxConstraints(maxWidth: maxWidth ?? QoomyTheme.maxContentWidth),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
@@ -65,6 +69,9 @@ class AppHeader extends ConsumerWidget {
                           : const SizedBox.shrink()),
                 ),
               ),
+
+              // Custom trailing widget
+              if (trailing != null) trailing!,
 
               // Teams button (optional, shown on home screen)
               if (showTeamsButton)

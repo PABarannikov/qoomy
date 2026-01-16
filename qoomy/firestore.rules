@@ -2,6 +2,11 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Admin check function
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'pabarannikov@gmail.com';
+    }
+
     // Users collection
     match /users/{userId} {
       allow read: if request.auth != null;
@@ -24,10 +29,10 @@ service cloud.firestore {
     match /rooms/{roomCode} {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
-      allow update: if request.auth != null && 
-        (request.auth.uid == resource.data.hostId || 
+      allow update: if request.auth != null &&
+        (request.auth.uid == resource.data.hostId ||
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
-      allow delete: if request.auth != null && request.auth.uid == resource.data.hostId;
+      allow delete: if request.auth != null && (request.auth.uid == resource.data.hostId || isAdmin());
 
       // Players subcollection
       match /players/{playerId} {
@@ -36,7 +41,8 @@ service cloud.firestore {
         allow update: if request.auth != null;
         allow delete: if request.auth != null &&
           (request.auth.uid == playerId ||
-           request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomCode)).data.hostId);
+           request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomCode)).data.hostId ||
+           isAdmin());
       }
 
       // Chat subcollection
@@ -46,7 +52,8 @@ service cloud.firestore {
         allow update: if request.auth != null &&
           request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomCode)).data.hostId;
         allow delete: if request.auth != null &&
-          request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomCode)).data.hostId;
+          (request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomCode)).data.hostId ||
+           isAdmin());
       }
     }
 

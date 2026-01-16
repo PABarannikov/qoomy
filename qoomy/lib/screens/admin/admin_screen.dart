@@ -14,6 +14,89 @@ class AdminScreen extends ConsumerStatefulWidget {
 class _AdminScreenState extends ConsumerState<AdminScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String? _selectedRoomCode;
+  bool _isDeleting = false;
+
+  Future<void> _deleteAllRooms() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete All Rooms'),
+        content: const Text(
+          'Are you sure you want to delete ALL rooms? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isDeleting = true);
+
+    try {
+      // Get all rooms
+      final roomsSnapshot = await _firestore.collection('rooms').get();
+
+      // Delete each room and its subcollections
+      for (final roomDoc in roomsSnapshot.docs) {
+        // Delete chat subcollection
+        final chatSnapshot = await _firestore
+            .collection('rooms')
+            .doc(roomDoc.id)
+            .collection('chat')
+            .get();
+        for (final chatDoc in chatSnapshot.docs) {
+          await chatDoc.reference.delete();
+        }
+
+        // Delete players subcollection
+        final playersSnapshot = await _firestore
+            .collection('rooms')
+            .doc(roomDoc.id)
+            .collection('players')
+            .get();
+        for (final playerDoc in playersSnapshot.docs) {
+          await playerDoc.reference.delete();
+        }
+
+        // Delete the room document
+        await roomDoc.reference.delete();
+      }
+
+      setState(() {
+        _selectedRoomCode = null;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deleted ${roomsSnapshot.docs.length} rooms'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting rooms: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isDeleting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,9 +107,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
             constraints: const BoxConstraints(maxWidth: 1200),
             child: Column(
               children: [
-                const AppHeader(
+                AppHeader(
                   title: 'Admin Panel',
                   backRoute: '/',
+                  maxWidth: 1200,
                 ),
                 Expanded(
                   child: Row(
@@ -34,7 +118,34 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                       // Rooms list (left panel)
                       SizedBox(
                         width: 300,
-                        child: _buildRoomsList(),
+                        child: Column(
+                          children: [
+                            // Delete All button
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: _isDeleting ? null : _deleteAllRooms,
+                                  icon: _isDeleting
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : const Icon(Icons.delete_forever),
+                                  label: Text(_isDeleting ? 'Deleting...' : 'Delete All Rooms'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const Divider(height: 1),
+                            Expanded(child: _buildRoomsList()),
+                          ],
+                        ),
                       ),
                       const VerticalDivider(width: 1),
                       // Room details (right panel)
