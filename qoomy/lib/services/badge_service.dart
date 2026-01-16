@@ -9,6 +9,21 @@ import 'package:qoomy/services/room_service.dart';
 class BadgeService {
   static const platform = MethodChannel('com.qoomy.qoomy/badge');
   static int _lastBadgeCount = -1;
+  static Function()? _onRefreshRequested;
+
+  static void init() {
+    // Listen for refresh requests from native iOS
+    platform.setMethodCallHandler((call) async {
+      if (call.method == 'refreshBadge') {
+        print('🔔 Native platform requested badge refresh');
+        _onRefreshRequested?.call();
+      }
+    });
+  }
+
+  static void setRefreshCallback(Function() callback) {
+    _onRefreshRequested = callback;
+  }
 
   static Future<void> setBadgeCount(int count, {bool forceUpdate = false}) async {
     // Only update if count actually changed (unless forceUpdate is true for debugging)
@@ -39,6 +54,9 @@ final badgeSyncProvider = StreamProvider.family<int, String>((ref, userId) {
   final roomService = RoomService();
   final timeFormat = DateFormat('HH:mm:ss');
 
+  // Initialize badge service to listen for native refresh requests
+  BadgeService.init();
+
   // Direct Firestore query for periodic refresh (not cached)
   Future<void> refreshFromFirestore() async {
     final timestamp = timeFormat.format(DateTime.now());
@@ -56,6 +74,11 @@ final badgeSyncProvider = StreamProvider.family<int, String>((ref, userId) {
       print('🔔 Checked at $timestamp. Error: $e');
     }
   }
+
+  // Register callback for native platform refresh requests (iOS background fetch / app active)
+  BadgeService.setRefreshCallback(() {
+    refreshFromFirestore();
+  });
 
   // Listen to the totalUnreadCountProvider for real-time updates
   ref.listen<AsyncValue<int>>(totalUnreadCountProvider(userId), (previous, next) {
@@ -83,6 +106,7 @@ final badgeSyncProvider = StreamProvider.family<int, String>((ref, userId) {
 
   ref.onDispose(() {
     periodicTimer?.cancel();
+    BadgeService.setRefreshCallback(() {}); // Clear callback
     controller.close();
   });
 

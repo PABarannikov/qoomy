@@ -23,6 +23,9 @@ import UserNotifications
     // Register for remote notifications
     application.registerForRemoteNotifications()
 
+    // Set minimum background fetch interval
+    application.setMinimumBackgroundFetchInterval(UIApplication.backgroundFetchIntervalMinimum)
+
     // Setup method channel for badge
     let controller = window?.rootViewController as! FlutterViewController
     badgeChannel = FlutterMethodChannel(name: "com.qoomy.qoomy/badge", binaryMessenger: controller.binaryMessenger)
@@ -52,5 +55,23 @@ import UserNotifications
     }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  // Handle background fetch - iOS will periodically call this
+  override func application(_ application: UIApplication, performFetchWithCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+    print("Background fetch triggered - requesting badge refresh from Flutter")
+    // Notify Flutter to refresh badge count
+    badgeChannel?.invokeMethod("refreshBadge", arguments: nil)
+    // Give Flutter a moment to process, then complete
+    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+      completionHandler(.newData)
+    }
+  }
+
+  // When app becomes active (returns from background), trigger badge refresh
+  override func applicationDidBecomeActive(_ application: UIApplication) {
+    super.applicationDidBecomeActive(application)
+    print("App became active - requesting badge refresh from Flutter")
+    badgeChannel?.invokeMethod("refreshBadge", arguments: nil)
   }
 }
