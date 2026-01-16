@@ -698,4 +698,59 @@ class RoomService {
 
     return controller.stream;
   }
+
+  /// Get total unread count by directly querying Firestore (not cached)
+  /// This is used for periodic badge sync to ensure accuracy
+  Future<int> getTotalUnreadCountDirect(String userId, List<String> teamIds) async {
+    try {
+      // Get all room codes for the user
+      final roomCodes = <String>{};
+
+      // 1. Get hosted rooms
+      final hostedSnapshot = await _roomsCollection
+          .where('hostId', isEqualTo: userId)
+          .get();
+      for (final doc in hostedSnapshot.docs) {
+        roomCodes.add(doc.id);
+      }
+
+      // 2. Get joined rooms
+      final joinedSnapshot = await _firestore
+          .collectionGroup('players')
+          .where('id', isEqualTo: userId)
+          .get();
+      for (final playerDoc in joinedSnapshot.docs) {
+        final roomCode = playerDoc.reference.parent.parent?.id;
+        if (roomCode != null) {
+          roomCodes.add(roomCode);
+        }
+      }
+
+      // 3. Get team rooms
+      if (teamIds.isNotEmpty) {
+        // Handle Firestore's 30 item limit for whereIn
+        for (var i = 0; i < teamIds.length; i += 30) {
+          final chunk = teamIds.sublist(
+            i,
+            i + 30 > teamIds.length ? teamIds.length : i + 30,
+          );
+          final teamRoomsSnapshot = await _roomsCollection
+              .where('teamId', whereIn: chunk)
+              .get();
+          for (final doc in teamRoomsSnapshot.docs) {
+            roomCodes.add(doc.id);
+          }
+        }
+      }
+
+      if (roomCodes.isEmpty) return 0;
+
+      // Now get unread counts for all rooms
+      final counts = await getUnreadCountsForRooms(roomCodes.toList(), userId);
+      return counts.values.fold<int>(0, (sum, count) => sum + count);
+    } catch (e) {
+      developer.log('Error getting total unread count: $e', name: 'RoomService');
+      return 0;
+    }
+  }
 }

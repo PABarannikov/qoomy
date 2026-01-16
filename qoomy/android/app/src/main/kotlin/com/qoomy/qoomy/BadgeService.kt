@@ -9,12 +9,16 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import me.leolin.shortcutbadger.ShortcutBadger
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class BadgeService : Service() {
 
     private val channelId = "qoomy_badge_channel"
     private val notificationId = 1
     private var badgeCount = 0
+    private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
     private lateinit var notificationManager: NotificationManager
 
@@ -60,14 +64,16 @@ class BadgeService : Service() {
         notificationManager.createNotificationChannel(channel)
     }
 
-    private fun buildNotification() = NotificationCompat.Builder(this, channelId)
-        .setSmallIcon(android.R.drawable.ic_dialog_info)
-        .setContentTitle("Qoomy")
-        .setContentText("Unread messages: $badgeCount")
-        .setNumber(badgeCount)
-        .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
-        .setOngoing(true)
-        .build()
+    private fun buildNotification(): android.app.Notification {
+        return NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("Qoomy")
+            .setContentText("Unread messages: $badgeCount")
+            .setNumber(badgeCount)
+            .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
+            .setOngoing(true)
+            .build()
+    }
 
     private fun setBadgeCount(count: Int) {
         badgeCount = count
