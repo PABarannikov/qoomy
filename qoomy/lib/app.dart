@@ -7,6 +7,7 @@ import 'package:qoomy/l10n/app_localizations.dart';
 import 'package:qoomy/providers/locale_provider.dart';
 import 'package:qoomy/providers/auth_provider.dart';
 import 'package:qoomy/services/badge_service.dart';
+import 'package:qoomy/services/push_notification_service.dart';
 
 class QoomyApp extends ConsumerStatefulWidget {
   const QoomyApp({super.key});
@@ -16,6 +17,7 @@ class QoomyApp extends ConsumerStatefulWidget {
 }
 
 class _QoomyAppState extends ConsumerState<QoomyApp> {
+  String? _lastUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +30,16 @@ class _QoomyAppState extends ConsumerState<QoomyApp> {
       if (user != null) {
         // Initialize badge sync for logged in user
         ref.watch(badgeSyncProvider(user.id));
+
+        // Initialize push notifications for iOS (only once per user)
+        if (_lastUserId != user.id) {
+          _lastUserId = user.id;
+          PushNotificationService.init(user.id);
+        }
+      } else if (_lastUserId != null) {
+        // User logged out - clean up
+        PushNotificationService.removeToken();
+        _lastUserId = null;
       }
     });
 
