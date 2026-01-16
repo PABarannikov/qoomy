@@ -50,7 +50,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   showTeamsButton: true,
                 ),
                 // Filters
-                _buildFilters(l10n),
+                currentUser.when(
+                  data: (user) => _buildFilters(l10n, user?.id),
+                  loading: () => _buildFilters(l10n, null),
+                  error: (_, __) => _buildFilters(l10n, null),
+                ),
                 Expanded(
                   child: currentUser.when(
                     data: (user) {
@@ -73,13 +77,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildFilters(AppLocalizations l10n) {
+  Widget _buildFilters(AppLocalizations l10n, String? userId) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
+        Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               // Role filter
               _buildIconFilterChip(
@@ -115,25 +121,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(width: 12),
               Container(width: 1, height: 28, color: Colors.grey.shade300),
               const SizedBox(width: 12),
-              // Unread filter
-              _buildIconFilterChip(
-                icon: Icons.markunread,
-                tooltip: l10n.unread,
-                isSelected: _unreadFilter == UnreadFilter.unread,
-                onTap: () => setState(() => _unreadFilter = _unreadFilter == UnreadFilter.unread ? UnreadFilter.all : UnreadFilter.unread),
-              ),
+              // Unread filter with badge
+              _buildUnreadFilterChip(l10n, userId),
             ],
           ),
         ),
         // Filter description
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            _getFilterDescription(l10n),
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
+        Text(
+          _getFilterDescription(l10n),
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
           ),
         ),
         const SizedBox(height: 4),
@@ -195,6 +193,76 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             size: 20,
             color: isSelected ? Colors.white : Colors.grey.shade600,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnreadFilterChip(AppLocalizations l10n, String? userId) {
+    final isSelected = _unreadFilter == UnreadFilter.unread;
+
+    return Tooltip(
+      message: l10n.unread,
+      child: GestureDetector(
+        onTap: () => setState(() => _unreadFilter = _unreadFilter == UnreadFilter.unread ? UnreadFilter.all : UnreadFilter.unread),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade300,
+                ),
+              ),
+              child: Icon(
+                Icons.markunread,
+                size: 20,
+                color: isSelected ? Colors.white : Colors.grey.shade600,
+              ),
+            ),
+            // Badge with unread count
+            if (userId != null)
+              Consumer(
+                builder: (context, ref, child) {
+                  final unreadCountAsync = ref.watch(totalUnreadCountProvider(userId));
+                  return unreadCountAsync.when(
+                    data: (count) {
+                      if (count == 0) return const SizedBox.shrink();
+                      return Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          child: Text(
+                            count > 99 ? '99+' : count.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  );
+                },
+              ),
+          ],
         ),
       ),
     );

@@ -49,21 +49,22 @@ class AppHeader extends ConsumerWidget {
               else
                 const SizedBox(width: 48), // Placeholder for alignment
 
-              const Spacer(),
-
-              // Title
-              if (titleWidget != null)
-                titleWidget!
-              else if (title != null)
-                Text(
-                  title!,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+              // Title (centered with flexible space)
+              Expanded(
+                child: Center(
+                  child: titleWidget ??
+                      (title != null
+                          ? Text(
+                              title!,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : const SizedBox.shrink()),
                 ),
-
-              const Spacer(),
+              ),
 
               // Teams button (optional, shown on home screen)
               if (showTeamsButton)

@@ -224,31 +224,34 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   Widget _buildHeader(BuildContext context, RoomModel room, AppLocalizations l10n, bool isHost) {
     return AppHeader(
-      titleWidget: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '${l10n.accessCode}: ',
-            style: const TextStyle(fontSize: 14),
-          ),
-          Text(
-            widget.roomCode,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: widget.roomCode));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.get('codeCopied')),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            child: const Icon(Icons.copy, size: 16),
-          ),
-        ],
+      titleWidget: GestureDetector(
+        onTap: () {
+          Clipboard.setData(ClipboardData(text: widget.roomCode));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.get('codeCopied')),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                '${l10n.accessCode}: ',
+                style: const TextStyle(fontSize: 14),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text(
+              widget.roomCode,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.copy, size: 16),
+          ],
+        ),
       ),
       extraMenuItems: isHost
           ? [
@@ -557,7 +560,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             children: [
               // Player name and message type
               Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (!isMe) ...[
                     CircleAvatar(
@@ -574,9 +576,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ),
                     const SizedBox(width: 8),
                   ],
-                  Text(
-                    isMe ? l10n.you : message.playerName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  Flexible(
+                    child: Text(
+                      isMe ? l10n.you : message.playerName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Container(
@@ -591,14 +596,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ),
                   ),
                   if (isMarked) ...[
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 4),
                     Icon(
                       message.isCorrect! ? Icons.check_circle : Icons.cancel,
                       size: 18,
                       color: message.isCorrect! ? QoomyTheme.successColor : QoomyTheme.errorColor,
                     ),
                   ],
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Text(
                     _formatMessageTime(message.sentAt, l10n),
                     style: TextStyle(

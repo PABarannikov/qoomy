@@ -437,7 +437,6 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
           children: [
             // Player name and message type
             Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 if (!isMe) ...[
                   CircleAvatar(
@@ -454,9 +453,12 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
                   ),
                   const SizedBox(width: 8),
                 ],
-                Text(
-                  isMe ? 'You' : message.playerName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                Flexible(
+                  child: Text(
+                    isMe ? 'You' : message.playerName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Container(
@@ -471,7 +473,7 @@ class _HostGameScreenState extends ConsumerState<HostGameScreen> {
                   ),
                 ),
                 if (isMarked) ...[
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Icon(
                     message.isCorrect! ? Icons.check_circle : Icons.cancel,
                     size: 18,

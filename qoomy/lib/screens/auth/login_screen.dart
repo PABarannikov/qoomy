@@ -127,25 +127,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     emailController.dispose();
   }
 
+  String _getAuthErrorMessage(Object error, AppLocalizations l10n) {
+    final errorString = error.toString().toLowerCase();
+
+    // Firebase error codes
+    if (errorString.contains('wrong-password') ||
+        errorString.contains('invalid-credential') ||
+        errorString.contains('invalid-login-credentials')) {
+      return l10n.invalidCredentials;
+    }
+    if (errorString.contains('user-not-found')) {
+      return l10n.userNotFound;
+    }
+    if (errorString.contains('too-many-requests')) {
+      return l10n.tooManyAttempts;
+    }
+    if (errorString.contains('invalid-email')) {
+      return l10n.validEmail;
+    }
+    if (errorString.contains('user-disabled')) {
+      return l10n.userNotFound;
+    }
+
+    // Return original error if no match
+    return error.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.isLoading;
 
+    final l10n = AppLocalizations.of(context);
+
     ref.listen(authNotifierProvider, (previous, next) {
       next.whenOrNull(
         error: (error, _) {
+          String message = _getAuthErrorMessage(error, l10n);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(error.toString()),
+              content: Text(message),
               backgroundColor: QoomyTheme.errorColor,
             ),
           );
         },
       );
     });
-
-    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: SafeArea(

@@ -28,7 +28,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   EvaluationMode _selectedMode = EvaluationMode.ai;
   bool _isCreating = false;
   Uint8List? _selectedImage;
-  TeamModel? _selectedTeam;
+  Set<String> _selectedTeamIds = {}; // Empty means "No Team"
 
   @override
   void dispose() {
@@ -64,23 +64,66 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
 
     setState(() => _isCreating = true);
 
-    final roomCode = await ref.read(roomNotifierProvider.notifier).createRoom(
-          hostId: currentUser.id,
-          hostName: currentUser.displayName,
-          evaluationMode: _selectedMode,
-          question: _questionController.text.trim(),
-          answer: _answerController.text.trim(),
-          comment: _commentController.text.trim().isEmpty ? null : _commentController.text.trim(),
-          imageBytes: _selectedImage,
-          teamId: _selectedTeam?.id,
-        );
+    final question = _questionController.text.trim();
+    final answer = _answerController.text.trim();
+    final comment = _commentController.text.trim().isEmpty ? null : _commentController.text.trim();
+
+    bool allSucceeded = true;
+    int createdCount = 0;
+
+    // If no teams selected, create one room without team
+    if (_selectedTeamIds.isEmpty) {
+      final roomCode = await ref.read(roomNotifierProvider.notifier).createRoom(
+            hostId: currentUser.id,
+            hostName: currentUser.displayName,
+            evaluationMode: _selectedMode,
+            question: question,
+            answer: answer,
+            comment: comment,
+            imageBytes: _selectedImage,
+            teamId: null,
+          );
+      if (roomCode != null) {
+        createdCount++;
+      } else {
+        allSucceeded = false;
+      }
+    } else {
+      // Create one room for each selected team
+      for (final teamId in _selectedTeamIds) {
+        final roomCode = await ref.read(roomNotifierProvider.notifier).createRoom(
+              hostId: currentUser.id,
+              hostName: currentUser.displayName,
+              evaluationMode: _selectedMode,
+              question: question,
+              answer: answer,
+              comment: comment,
+              imageBytes: _selectedImage,
+              teamId: teamId,
+            );
+        if (roomCode != null) {
+          createdCount++;
+        } else {
+          allSucceeded = false;
+        }
+      }
+    }
 
     if (mounted) {
       setState(() => _isCreating = false);
-      if (roomCode != null) {
+      final l10n = AppLocalizations.of(context);
+
+      if (createdCount > 0) {
         context.go('/');
+        if (createdCount > 1) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${l10n.created} $createdCount ${l10n.rooms.toLowerCase()}'),
+              backgroundColor: QoomyTheme.successColor,
+            ),
+          );
+        }
       } else {
-        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.failedToCreateRoom),
@@ -411,7 +454,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
           data: (teams) => Column(
             children: [
               // No Team option
-              _buildTeamCard(null),
+              _buildNoTeamCard(),
               ...teams.map((team) => _buildTeamCard(team)),
             ],
           ),
@@ -427,14 +470,15 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
     );
   }
 
-  Widget _buildTeamCard(TeamModel? team) {
-    final isSelected = _selectedTeam?.id == team?.id;
+  Widget _buildNoTeamCard() {
+    // "No Team" is selected when _selectedTeamIds is empty
+    final isSelected = _selectedTeamIds.isEmpty;
     final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: GestureDetector(
-        onTap: () => setState(() => _selectedTeam = team),
+        onTap: () => setState(() => _selectedTeamIds = {}),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(16),
@@ -452,18 +496,74 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: team == null
-                    ? Colors.grey.shade200
-                    : QoomyTheme.primaryColor.withOpacity(0.1),
-                child: team == null
-                    ? Icon(Icons.group_off, color: Colors.grey.shade600)
-                    : Text(
-                        team.name.isNotEmpty ? team.name[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: QoomyTheme.primaryColor,
-                        ),
-                      ),
+                backgroundColor: Colors.grey.shade200,
+                child: Icon(Icons.group_off, color: Colors.grey.shade600),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l10n.noTeam,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? QoomyTheme.primaryColor
+                        : Colors.black87,
+                  ),
+                ),
+              ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle,
+                  color: QoomyTheme.primaryColor,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTeamCard(TeamModel team) {
+    final isSelected = _selectedTeamIds.contains(team.id);
+    final l10n = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            if (isSelected) {
+              _selectedTeamIds.remove(team.id);
+            } else {
+              _selectedTeamIds.add(team.id);
+            }
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
+            ),
+            color: isSelected
+                ? QoomyTheme.primaryColor.withOpacity(0.1)
+                : Colors.transparent,
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: QoomyTheme.primaryColor.withOpacity(0.1),
+                child: Text(
+                  team.name.isNotEmpty ? team.name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: QoomyTheme.primaryColor,
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -471,7 +571,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      team?.name ?? l10n.noTeam,
+                      team.name,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: isSelected
@@ -479,16 +579,14 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                             : Colors.black87,
                       ),
                     ),
-                    if (team != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        '${team.memberCount} ${l10n.members.toLowerCase()}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${team.memberCount} ${l10n.members.toLowerCase()}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),

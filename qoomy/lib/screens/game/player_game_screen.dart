@@ -319,7 +319,6 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
           children: [
             // Player name and type badge
             Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 if (!isMe) ...[
                   CircleAvatar(
@@ -336,9 +335,12 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                   ),
                   const SizedBox(width: 6),
                 ],
-                Text(
-                  isMe ? l10n.you : message.playerName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                Flexible(
+                  child: Text(
+                    isMe ? l10n.you : message.playerName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 const SizedBox(width: 6),
                 Container(
@@ -353,14 +355,14 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                   ),
                 ),
                 if (isMarked) ...[
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
                   Icon(
                     message.isCorrect! ? Icons.check_circle : Icons.cancel,
                     size: 16,
                     color: message.isCorrect! ? QoomyTheme.successColor : QoomyTheme.errorColor,
                   ),
                 ],
-                const Spacer(),
+                const SizedBox(width: 6),
                 Text(
                   _formatMessageTime(message.sentAt, l10n),
                   style: TextStyle(

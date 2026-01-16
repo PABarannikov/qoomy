@@ -73,17 +73,19 @@ class BadgeService : Service() {
         badgeCount = count
 
         if (badgeCount == 0) {
-            // Clear badge and stop foreground
+            // Clear badge and remove notification
             ShortcutBadger.removeCount(applicationContext)
-            notificationManager.cancel(notificationId)
+            // Stop foreground but keep service running
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
         } else {
             // Update badge and notification
             val notification = buildNotification()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForeground(notificationId, notification)
-            } else {
-                notificationManager.notify(notificationId, notification)
-            }
+            startForeground(notificationId, notification)
             ShortcutBadger.applyCount(applicationContext, badgeCount)
         }
     }

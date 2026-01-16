@@ -46,6 +46,9 @@ class AppLocalizations {
       'sendResetLink': 'Send Reset Link',
       'resetLinkSent': 'Password reset link has been sent to your email',
       'resetLinkError': 'Failed to send reset link. Please check your email address.',
+      'wrongPassword': 'Wrong password. Please try again.',
+      'invalidCredentials': 'Invalid email or password',
+      'tooManyAttempts': 'Too many failed attempts. Please try again later.',
       'enterName': 'Please enter your name',
       'nameTooShort': 'Name must be at least 2 characters',
       'passwordTooShort': 'Password must be at least 6 characters',
@@ -98,6 +101,8 @@ class AppLocalizations {
       'changeImage': 'Change Image',
       'create': 'Create',
       'creating': 'Creating...',
+      'created': 'Created',
+      'rooms': 'Rooms',
       'enterQuestion': 'Please enter a question',
       'enterAnswer': 'Please enter an answer',
 
@@ -274,6 +279,9 @@ class AppLocalizations {
       'sendResetLink': 'Отправить ссылку',
       'resetLinkSent': 'Ссылка для сброса пароля отправлена на ваш email',
       'resetLinkError': 'Не удалось отправить ссылку. Проверьте email.',
+      'wrongPassword': 'Неверный пароль. Попробуйте снова.',
+      'invalidCredentials': 'Неверный email или пароль',
+      'tooManyAttempts': 'Слишком много попыток. Попробуйте позже.',
       'enterName': 'Введите имя',
       'nameTooShort': 'Имя должно быть минимум 2 символа',
       'passwordTooShort': 'Пароль должен быть минимум 6 символов',
@@ -326,6 +334,8 @@ class AppLocalizations {
       'changeImage': 'Изменить изображение',
       'create': 'Создать',
       'creating': 'Создание...',
+      'created': 'Создано',
+      'rooms': 'Комнат',
       'enterQuestion': 'Введите вопрос',
       'enterAnswer': 'Введите ответ',
 
@@ -505,6 +515,9 @@ class AppLocalizations {
   String get sendResetLink => get('sendResetLink');
   String get resetLinkSent => get('resetLinkSent');
   String get resetLinkError => get('resetLinkError');
+  String get wrongPassword => get('wrongPassword');
+  String get invalidCredentials => get('invalidCredentials');
+  String get tooManyAttempts => get('tooManyAttempts');
   String get enterName => get('enterName');
   String get nameTooShort => get('nameTooShort');
   String get passwordTooShort => get('passwordTooShort');
@@ -547,6 +560,8 @@ class AppLocalizations {
   String get changeImage => get('changeImage');
   String get create => get('create');
   String get creating => get('creating');
+  String get created => get('created');
+  String get rooms => get('rooms');
   String get enterQuestion => get('enterQuestion');
   String get enterAnswer => get('enterAnswer');
   String get enterRoomCode => get('enterRoomCode');
