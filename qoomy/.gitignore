@@ -45,3 +45,6 @@ app.*.map.json
 # Environment files with secrets
 .env.local
 .env
+
+# APNs keys (sensitive)
+ios/keys/*.p8
