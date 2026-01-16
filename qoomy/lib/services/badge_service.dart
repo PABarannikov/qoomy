@@ -23,11 +23,11 @@ class BadgeService {
 }
 
 /// Provider that watches total unread count and updates app badge
-final badgeSyncProvider = StreamProvider.family<void, String>((ref, userId) async* {
-  final roomService = ref.watch(roomServiceProvider);
+final badgeSyncProvider = Provider.family<void, String>((ref, userId) {
+  // Watch totalUnreadCountProvider which includes hosted, joined, AND team rooms
+  final totalUnreadAsync = ref.watch(totalUnreadCountProvider(userId));
 
-  await for (final count in roomService.totalUnreadCountStream(userId)) {
-    await BadgeService.setBadgeCount(count);
-    yield null;
-  }
+  totalUnreadAsync.whenData((count) {
+    BadgeService.setBadgeCount(count);
+  });
 });

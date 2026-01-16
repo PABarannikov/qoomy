@@ -34,9 +34,50 @@ final unreadCountProvider = StreamProvider.family<int, ({String roomCode, String
   return ref.watch(roomServiceProvider).unreadCountStream(params.roomCode, params.userId);
 });
 
-/// Provider for total unread message count across all user's rooms
+/// Provider for total unread message count across all user's rooms (hosted, joined, AND team rooms)
 final totalUnreadCountProvider = StreamProvider.family<int, String>((ref, userId) {
-  return ref.watch(roomServiceProvider).totalUnreadCountStream(userId);
+  final hostedRoomsAsync = ref.watch(userHostedRoomsProvider(userId));
+  final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider(userId));
+  final teamRoomsAsync = ref.watch(userTeamRoomsProvider(userId));
+  final roomService = ref.watch(roomServiceProvider);
+
+  // Combine all rooms and calculate total unread count
+  return hostedRoomsAsync.when(
+    data: (hostedRooms) => joinedRoomsAsync.when(
+      data: (joinedRooms) => teamRoomsAsync.when(
+        data: (teamRooms) {
+          // Deduplicate rooms by code
+          final hostedCodes = hostedRooms.map((r) => r.code).toSet();
+          final joinedCodes = joinedRooms.map((r) => r.code).toSet();
+
+          // Get unique team rooms (not in hosted or joined)
+          final uniqueTeamRooms = teamRooms
+              .where((r) => !hostedCodes.contains(r.code) && !joinedCodes.contains(r.code))
+              .toList();
+
+          // Combine all unique room codes
+          final allRoomCodes = <String>{
+            ...hostedCodes,
+            ...joinedCodes,
+            ...uniqueTeamRooms.map((r) => r.code),
+          };
+
+          if (allRoomCodes.isEmpty) {
+            return Stream.value(0);
+          }
+
+          // Create a stream that combines unread counts from all rooms
+          return roomService.combinedUnreadCountStream(userId, allRoomCodes.toList());
+        },
+        loading: () => Stream.value(0),
+        error: (_, __) => Stream.value(0),
+      ),
+      loading: () => Stream.value(0),
+      error: (_, __) => Stream.value(0),
+    ),
+    loading: () => Stream.value(0),
+    error: (_, __) => Stream.value(0),
+  );
 });
 
 /// Provider to check if a room has at least one correct answer

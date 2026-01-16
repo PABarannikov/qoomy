@@ -663,4 +663,39 @@ class RoomService {
 
     return controller.stream;
   }
+
+  /// Stream of combined unread message count for a specific list of room codes
+  Stream<int> combinedUnreadCountStream(String userId, List<String> roomCodes) {
+    if (roomCodes.isEmpty) {
+      return Stream.value(0);
+    }
+
+    final controller = StreamController<int>.broadcast();
+    final roomUnreadCounts = <String, int>{};
+    final subscriptions = <StreamSubscription>[];
+
+    void emitTotal() {
+      final total = roomUnreadCounts.values.fold<int>(0, (sum, count) => sum + count);
+      controller.add(total);
+    }
+
+    // Subscribe to unread count for each room
+    for (final roomCode in roomCodes) {
+      roomUnreadCounts[roomCode] = 0;
+      final sub = unreadCountStream(roomCode, userId).listen((count) {
+        roomUnreadCounts[roomCode] = count;
+        emitTotal();
+      });
+      subscriptions.add(sub);
+    }
+
+    controller.onCancel = () {
+      for (final sub in subscriptions) {
+        sub.cancel();
+      }
+      controller.close();
+    };
+
+    return controller.stream;
+  }
 }

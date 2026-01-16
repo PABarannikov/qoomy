@@ -6,7 +6,6 @@ import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
 import 'package:qoomy/providers/locale_provider.dart';
 import 'package:qoomy/providers/auth_provider.dart';
-import 'package:qoomy/providers/room_provider.dart';
 import 'package:qoomy/services/badge_service.dart';
 
 class QoomyApp extends ConsumerStatefulWidget {
