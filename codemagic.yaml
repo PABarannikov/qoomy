@@ -21,7 +21,7 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
-          app-store-connect fetch-signing-files com.qoomy.qoomy --type IOS_APP_STORE --create --strict-match-identifier
+          app-store-connect fetch-signing-files com.qoomy.qoomy --type IOS_APP_STORE --create --force
           keychain add-certificates
           xcode-project use-profiles
       - name: Build iOS
