@@ -730,9 +730,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (!context.mounted) return;
 
     if (room.status == RoomStatus.finished) {
-      context.push('/results/${room.code}');
+      await context.push('/results/${room.code}');
     } else {
-      context.push('/game/${room.code}');
+      await context.push('/game/${room.code}');
+    }
+
+    // Force refresh unread count after returning from room
+    if (mounted) {
+      ref.invalidate(unreadCountProvider((roomCode: room.code, userId: userId)));
     }
   }
 

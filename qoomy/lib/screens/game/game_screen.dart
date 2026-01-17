@@ -60,6 +60,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   @override
   void dispose() {
+    // Mark as read one more time when leaving to ensure badge is cleared
+    _markAsRead();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _messageController.dispose();

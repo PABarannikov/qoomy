@@ -23,8 +23,8 @@ exports.onNewChatMessage = onDocumentCreated(
 
     const message = snapshot.data();
     const roomCode = event.params.roomCode;
-    const senderId = message.senderId;
-    const senderName = message.senderName || "Someone";
+    const senderId = message.playerId;
+    const senderName = message.playerName || "Someone";
     const messageText = message.text || "";
 
     console.log(`New message in room ${roomCode} from ${senderName}`);
