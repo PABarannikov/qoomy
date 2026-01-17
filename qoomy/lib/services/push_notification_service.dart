@@ -121,26 +121,34 @@ class PushNotificationService {
 
   /// Remove FCM token on logout
   static Future<void> removeToken() async {
-    // Skip on web
-    if (kIsWeb) return;
-    if (_currentUserId == null) return;
+    // Skip on web and non-iOS platforms
+    if (kIsWeb || !Platform.isIOS) return;
+
+    final userIdToRemove = _currentUserId;
+    if (userIdToRemove == null) {
+      debugPrint('FCM: No user ID to remove token for');
+      return;
+    }
+
+    // Clear the current user ID immediately to prevent race conditions
+    _currentUserId = null;
 
     try {
       final token = await _messaging.getToken();
       if (token != null) {
         await _firestore
             .collection('users')
-            .doc(_currentUserId)
+            .doc(userIdToRemove)
             .collection('fcmTokens')
             .doc(token)
             .delete();
 
-        debugPrint('FCM token removed');
+        debugPrint('FCM token removed for user $userIdToRemove');
+      } else {
+        debugPrint('FCM: No token to remove');
       }
     } catch (e) {
       debugPrint('Error removing FCM token: $e');
     }
-
-    _currentUserId = null;
   }
 }

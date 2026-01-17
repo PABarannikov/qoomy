@@ -65,6 +65,14 @@
         { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" },
         { "order": "DESCENDING", "queryScope": "COLLECTION_GROUP" }
       ]
+    },
+    {
+      "collectionGroup": "members",
+      "fieldPath": "id",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
     }
   ]
 }

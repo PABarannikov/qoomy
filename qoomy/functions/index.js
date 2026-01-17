@@ -167,13 +167,14 @@ exports.onNewChatMessage = onDocumentCreated(
 );
 
 /**
- * Calculate total unread message count for a user across all their rooms.
+ * Calculate total unread message count for a user across ALL their rooms.
+ * This is used for the iOS app badge to show total unread messages for the recipient.
  */
 async function calculateTotalUnreadCount(userId) {
   let totalUnread = 0;
 
   try {
-    // Get user's last read timestamps
+    // Get user's last read timestamps for all rooms
     const roomReadsSnapshot = await db
       .collection("users")
       .doc(userId)
@@ -194,12 +195,6 @@ async function calculateTotalUnreadCount(userId) {
       .where("hostId", "==", userId)
       .get();
 
-    // Get rooms where user is a player
-    const playerRoomsSnapshot = await db
-      .collectionGroup("players")
-      .where("id", "==", userId)
-      .get();
-
     const roomCodes = new Set();
 
     // Add hosted rooms
@@ -207,64 +202,81 @@ async function calculateTotalUnreadCount(userId) {
       roomCodes.add(doc.id);
     });
 
-    // Add joined rooms
-    for (const playerDoc of playerRoomsSnapshot.docs) {
-      const roomCode = playerDoc.ref.parent.parent?.id;
-      if (roomCode) {
-        roomCodes.add(roomCode);
+    // Get rooms where user is a player (collection group query)
+    try {
+      const playerRoomsSnapshot = await db
+        .collectionGroup("players")
+        .where("id", "==", userId)
+        .get();
+
+      for (const playerDoc of playerRoomsSnapshot.docs) {
+        const roomCode = playerDoc.ref.parent.parent?.id;
+        if (roomCode) {
+          roomCodes.add(roomCode);
+        }
       }
+    } catch (err) {
+      console.log("Could not query players collection group:", err.message);
     }
 
     // Get user's teams for team rooms
-    const teamsSnapshot = await db
-      .collectionGroup("members")
-      .where("id", "==", userId)
-      .get();
-
-    const teamIds = new Set();
-    teamsSnapshot.docs.forEach((doc) => {
-      const teamId = doc.ref.parent.parent?.id;
-      if (teamId) {
-        teamIds.add(teamId);
-      }
-    });
-
-    // Get team rooms
-    if (teamIds.size > 0) {
-      const teamIdsArray = Array.from(teamIds).slice(0, 30); // Firestore limit
-      const teamRoomsSnapshot = await db
-        .collection("rooms")
-        .where("teamId", "in", teamIdsArray)
+    try {
+      const teamsSnapshot = await db
+        .collectionGroup("members")
+        .where("id", "==", userId)
         .get();
 
-      teamRoomsSnapshot.docs.forEach((doc) => {
-        roomCodes.add(doc.id);
+      const teamIds = new Set();
+      teamsSnapshot.docs.forEach((doc) => {
+        const teamId = doc.ref.parent.parent?.id;
+        if (teamId) {
+          teamIds.add(teamId);
+        }
       });
+
+      // Get team rooms
+      if (teamIds.size > 0) {
+        const teamIdsArray = Array.from(teamIds).slice(0, 30); // Firestore limit
+        const teamRoomsSnapshot = await db
+          .collection("rooms")
+          .where("teamId", "in", teamIdsArray)
+          .get();
+
+        teamRoomsSnapshot.docs.forEach((doc) => {
+          roomCodes.add(doc.id);
+        });
+      }
+    } catch (err) {
+      console.log("Could not query members collection group:", err.message);
     }
+
+    console.log(`Calculating unread for user ${userId} across ${roomCodes.size} rooms`);
 
     // Calculate unread for each room
     for (const roomCode of roomCodes) {
       const lastRead = lastReadMap.get(roomCode);
 
+      // Get all chat messages (or messages after lastRead)
       let query = db.collection("rooms").doc(roomCode).collection("chat");
-
       if (lastRead) {
         query = query.where("sentAt", ">", lastRead);
       }
 
-      // Exclude messages sent by this user
       const chatSnapshot = await query.get();
       let unreadInRoom = 0;
 
       chatSnapshot.docs.forEach((doc) => {
         const data = doc.data();
-        if (data.senderId !== userId) {
+        // Only count messages NOT sent by this user
+        if (data.playerId !== userId) {
           unreadInRoom++;
         }
       });
 
       totalUnread += unreadInRoom;
     }
+
+    console.log(`Total unread for user ${userId}: ${totalUnread}`);
   } catch (error) {
     console.error("Error calculating unread count:", error);
   }
