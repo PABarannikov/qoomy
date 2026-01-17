@@ -25,14 +25,13 @@ workflows:
         script: flutter pub get
       - name: Set up code signing
         script: xcode-project use-profiles
-      - name: Build iOS archive
+      - name: Build iOS
         script: |
           flutter build ios --release --dart-define=FIREBASE_IOS_API_KEY=$FIREBASE_IOS_API_KEY
-          cd ios
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -archivePath $CM_BUILD_DIR/Runner.xcarchive archive
-      - name: Export IPA
+      - name: Build IPA
         script: |
-          xcode-project export-ipa --archive-path $CM_BUILD_DIR/Runner.xcarchive
+          cd ios
+          xcode-project build-ipa --workspace Runner.xcworkspace --scheme Runner
     artifacts:
       - build/ios/ipa/*.ipa
       - $CM_BUILD_DIR/*.ipa
