@@ -16,6 +16,11 @@ workflows:
       vars:
         FIREBASE_IOS_API_KEY: AIzaSyCJ85LStHr8xaRjoByYc_0a1FjbFL0hdig
     scripts:
+      - name: Show codemagic.yaml being used
+        script: |
+          echo "=== CODEMAGIC.YAML CONTENT ==="
+          cat ../codemagic.yaml
+          echo "=== END OF CODEMAGIC.YAML ==="
       - name: Get Flutter packages
         script: flutter pub get
       - name: Set up code signing
