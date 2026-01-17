@@ -30,8 +30,7 @@ workflows:
           flutter build ios --release --dart-define=FIREBASE_IOS_API_KEY=$FIREBASE_IOS_API_KEY
       - name: Build IPA
         script: |
-          cd ios
-          xcode-project build-ipa --workspace Runner.xcworkspace --scheme Runner
+          xcode-project build-ipa --workspace ios/Runner.xcworkspace --scheme Runner
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
