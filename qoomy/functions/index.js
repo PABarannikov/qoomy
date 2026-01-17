@@ -74,7 +74,7 @@ exports.onNewChatMessage = onDocumentCreated(
 
     for (const userId of recipientIds) {
       try {
-        // Get user's FCM tokens (iOS only)
+        // Get user's FCM tokens from subcollection (iOS only)
         const tokensSnapshot = await db
           .collection("users")
           .doc(userId)
@@ -82,19 +82,35 @@ exports.onNewChatMessage = onDocumentCreated(
           .where("platform", "==", "ios")
           .get();
 
-        if (tokensSnapshot.empty) {
-          console.log(`No iOS FCM tokens for user ${userId}`);
+        // Also check legacy fcmToken field directly on user document
+        const userDoc = await db.collection("users").doc(userId).get();
+        const legacyToken = userDoc.exists ? userDoc.data().fcmToken : null;
+
+        if (tokensSnapshot.empty && !legacyToken) {
+          console.log(`No FCM tokens for user ${userId}`);
           continue;
         }
 
         // Calculate total unread count for this user
         const unreadCount = await calculateTotalUnreadCount(userId);
 
-        // Send to all iOS tokens for this user
+        // Collect tokens from both sources
+        const tokens = new Set();
+
+        // Add tokens from subcollection
         for (const tokenDoc of tokensSnapshot.docs) {
           const token = tokenDoc.data().token;
-          if (!token) continue;
+          if (token) tokens.add(token);
+        }
 
+        // Add legacy token if exists
+        if (legacyToken) {
+          tokens.add(legacyToken);
+          console.log(`Using legacy fcmToken for user ${userId}`);
+        }
+
+        // Create notifications for all tokens
+        for (const token of tokens) {
           notifications.push({
             token,
             userId,

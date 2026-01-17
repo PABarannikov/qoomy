@@ -18,6 +18,15 @@ class QoomyApp extends ConsumerStatefulWidget {
 
 class _QoomyAppState extends ConsumerState<QoomyApp> {
   String? _lastUserId;
+  bool _initializedForUser = false;
+
+  Future<void> _initializeUserServices(String userId) async {
+    // Small delay to allow Firebase auth token to propagate to Firestore
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted && _lastUserId == userId) {
+      setState(() => _initializedForUser = true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,18 +37,23 @@ class _QoomyAppState extends ConsumerState<QoomyApp> {
     final currentUser = ref.watch(currentUserProvider);
     currentUser.whenData((user) {
       if (user != null) {
-        // Initialize badge sync for logged in user
-        ref.watch(badgeSyncProvider(user.id));
-
-        // Initialize push notifications for iOS (only once per user)
+        // Initialize services only once per user, with delay for auth propagation
         if (_lastUserId != user.id) {
           _lastUserId = user.id;
+          _initializedForUser = false;
+          _initializeUserServices(user.id);
           PushNotificationService.init(user.id);
+        }
+
+        // Only start badge sync after initialization delay
+        if (_initializedForUser) {
+          ref.watch(badgeSyncProvider(user.id));
         }
       } else if (_lastUserId != null) {
         // User logged out - clean up
         PushNotificationService.removeToken();
         _lastUserId = null;
+        _initializedForUser = false;
       }
     });
 

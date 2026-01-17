@@ -23,6 +23,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   RoleFilter _roleFilter = RoleFilter.all;
   StatusFilter _statusFilter = StatusFilter.all;
   UnreadFilter _unreadFilter = UnreadFilter.all;
+  bool _hasRetried = false;
+  String? _lastErrorUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +61,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: currentUser.when(
                     data: (user) {
                       if (user == null) {
+                        // Reset retry state on logout
+                        _hasRetried = false;
+                        _lastErrorUserId = null;
                         return Center(child: Text(l10n.pleaseLogin));
+                      }
+                      // Reset retry state when user changes
+                      if (_lastErrorUserId != null && _lastErrorUserId != user.id) {
+                        _hasRetried = false;
+                        _lastErrorUserId = null;
                       }
                       return _buildRoomsList(context, ref, user.id);
                     },
@@ -268,6 +278,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  Widget _buildErrorOrRetry(WidgetRef ref, Object error, String userId) {
+    final errorStr = error.toString().toLowerCase();
+    // If it's a permission error, auto-retry after a short delay
+    // This handles the race condition where auth token isn't propagated yet
+    if (errorStr.contains('permission') || errorStr.contains('denied')) {
+      // Only retry once per user to avoid infinite loops
+      if (!_hasRetried || _lastErrorUserId != userId) {
+        _hasRetried = true;
+        _lastErrorUserId = userId;
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) {
+            ref.invalidate(userHostedRoomsProvider(userId));
+            ref.invalidate(userJoinedRoomsProvider(userId));
+            ref.invalidate(userTeamRoomsProvider(userId));
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted) {
+                _hasRetried = false;
+              }
+            });
+          }
+        });
+      }
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Center(child: Text('Error: $error'));
+  }
+
   Widget _buildRoomsList(BuildContext context, WidgetRef ref, String userId) {
     final hostedRoomsAsync = ref.watch(userHostedRoomsProvider(userId));
     final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider(userId));
@@ -348,13 +385,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) => _buildErrorOrRetry(ref, e, userId),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => _buildErrorOrRetry(ref, e, userId),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => _buildErrorOrRetry(ref, e, userId),
     );
   }
 
