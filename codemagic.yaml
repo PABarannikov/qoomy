@@ -31,10 +31,9 @@ workflows:
       - name: Build IPA
         script: |
           cd ios
-          xcode-project build-ipa --workspace Runner.xcworkspace --scheme Runner
+          xcode-project build-ipa --workspace Runner.xcworkspace --scheme Runner --ipa-directory $CM_BUILD_DIR/ios/ipa
     artifacts:
-      - build/ios/ipa/*.ipa
-      - $CM_BUILD_DIR/*.ipa
+      - $CM_BUILD_DIR/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
