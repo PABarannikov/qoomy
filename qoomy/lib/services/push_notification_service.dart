@@ -10,9 +10,9 @@ class PushNotificationService {
 
   /// Initialize push notifications for iOS only
   static Future<void> init(String userId) async {
-    // Only initialize for iOS
-    if (!Platform.isIOS) {
-      debugPrint('Push notifications: Skipping - not iOS');
+    // Only initialize for iOS (skip on web and other platforms)
+    if (kIsWeb || !Platform.isIOS) {
+      debugPrint('Push notifications: Skipping - not iOS (kIsWeb=$kIsWeb)');
       return;
     }
 
@@ -121,6 +121,8 @@ class PushNotificationService {
 
   /// Remove FCM token on logout
   static Future<void> removeToken() async {
+    // Skip on web
+    if (kIsWeb) return;
     if (_currentUserId == null) return;
 
     try {
