@@ -23,6 +23,8 @@ workflows:
           echo "=== END OF CODEMAGIC.YAML ==="
       - name: Get Flutter packages
         script: flutter pub get
+      - name: Set up code signing
+        script: xcode-project use-profiles
       - name: Build iOS
         script: flutter build ipa --release --export-options-plist=$CM_EXPORT_OPTIONS_PLIST --dart-define=FIREBASE_IOS_API_KEY=$FIREBASE_IOS_API_KEY
     artifacts:
