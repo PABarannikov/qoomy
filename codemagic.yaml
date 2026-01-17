@@ -26,17 +26,12 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
-          echo "=== Deleting old Qoomy profiles from App Store Connect ==="
-          app-store-connect profiles list --bundle-id-identifier com.qoomy.qoomy --profile-type IOS_APP_STORE | grep -i qoomy || echo "No profiles found"
-          app-store-connect profiles delete --bundle-id-identifier com.qoomy.qoomy --profile-type IOS_APP_STORE || echo "No profiles to delete or delete failed"
-          echo "=== Creating fresh profile with --create ==="
-          app-store-connect fetch-signing-files com.qoomy.qoomy --type IOS_APP_STORE --create --verbose
-          echo "=== Listing downloaded profiles ==="
-          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No profiles directory"
+          echo "=== Creating profile with --create ==="
+          app-store-connect fetch-signing-files com.qoomy.qoomy --type IOS_APP_STORE --create
           echo "=== Adding certificates ==="
           keychain add-certificates
           echo "=== Using profiles ==="
-          xcode-project use-profiles --verbose
+          xcode-project use-profiles
       - name: Build iOS
         script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist --dart-define=FIREBASE_IOS_API_KEY=$FIREBASE_IOS_API_KEY
     artifacts:
