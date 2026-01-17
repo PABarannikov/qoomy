@@ -28,6 +28,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   bool _isSending = false;
   ChatMessage? _replyingTo; // Message being replied to
   bool _initialScrollDone = false; // Track if we've scrolled on initial load
+  bool _hasRetried = false; // Track if we've retried after permission error
+  String? _lastRetryRoomCode; // Track which room we retried for
 
   // Check if running on desktop (Enter sends message) vs mobile (Enter creates newline)
   bool get _isDesktopPlatform {
@@ -76,6 +78,34 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (shouldCollapse != _questionCollapsed) {
       setState(() => _questionCollapsed = shouldCollapse);
     }
+  }
+
+  /// Handle errors with auto-retry for permission errors (web auth race condition)
+  Widget _buildErrorOrRetry(Object error) {
+    final errorStr = error.toString().toLowerCase();
+    // If it's a permission error, auto-retry after a short delay
+    // This handles the race condition where auth token isn't propagated yet on web
+    if (errorStr.contains('permission') || errorStr.contains('denied')) {
+      // Only retry once per room to avoid infinite loops
+      if (!_hasRetried || _lastRetryRoomCode != widget.roomCode) {
+        _hasRetried = true;
+        _lastRetryRoomCode = widget.roomCode;
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) {
+            ref.invalidate(roomProvider(widget.roomCode));
+            ref.invalidate(playersProvider(widget.roomCode));
+            ref.invalidate(chatProvider(widget.roomCode));
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted) {
+                _hasRetried = false;
+              }
+            });
+          }
+        });
+      }
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Center(child: Text('Error: $error'));
   }
 
   void _scrollToBottom() {
@@ -144,7 +174,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 return _buildGameContent(context, room, playersAsync, chatAsync, l10n, isHost, currentUser);
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
+              error: (e, _) => _buildErrorOrRetry(e),
             ),
           ),
         ),
@@ -211,7 +241,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               canSeeAnswer: canSeeAnswer,
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            error: (e, _) => _buildErrorOrRetry(e),
           ),
         ),
 
