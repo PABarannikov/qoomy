@@ -26,8 +26,11 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
-          echo "=== Fetching signing files with --create --force ==="
-          app-store-connect fetch-signing-files com.qoomy.qoomy --type IOS_APP_STORE --create --force --verbose
+          echo "=== Deleting old Qoomy profiles from App Store Connect ==="
+          app-store-connect profiles list --bundle-id-identifier com.qoomy.qoomy --profile-type IOS_APP_STORE | grep -i qoomy || echo "No profiles found"
+          app-store-connect profiles delete --bundle-id-identifier com.qoomy.qoomy --profile-type IOS_APP_STORE || echo "No profiles to delete or delete failed"
+          echo "=== Creating fresh profile with --create ==="
+          app-store-connect fetch-signing-files com.qoomy.qoomy --type IOS_APP_STORE --create --verbose
           echo "=== Listing downloaded profiles ==="
           ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No profiles directory"
           echo "=== Adding certificates ==="
