@@ -26,9 +26,14 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
-          app-store-connect fetch-signing-files com.qoomy.qoomy --type IOS_APP_STORE --create --force
+          echo "=== Fetching signing files with --create --force ==="
+          app-store-connect fetch-signing-files com.qoomy.qoomy --type IOS_APP_STORE --create --force --verbose
+          echo "=== Listing downloaded profiles ==="
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No profiles directory"
+          echo "=== Adding certificates ==="
           keychain add-certificates
-          xcode-project use-profiles
+          echo "=== Using profiles ==="
+          xcode-project use-profiles --verbose
       - name: Build iOS
         script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist --dart-define=FIREBASE_IOS_API_KEY=$FIREBASE_IOS_API_KEY
     artifacts:
