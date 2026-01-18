@@ -1,11 +1,13 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qoomy/services/room_service.dart';
+import 'package:qoomy/services/ai_service.dart';
 import 'package:qoomy/models/room_model.dart';
 import 'package:qoomy/models/chat_message_model.dart';
 import 'package:qoomy/providers/team_provider.dart';
 
 final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
+final aiServiceProvider = Provider<AiService>((ref) => AiService());
 
 final roomProvider = StreamProvider.family<RoomModel?, String>((ref, roomCode) {
   return ref.watch(roomServiceProvider).roomStream(roomCode);
@@ -41,43 +43,34 @@ final totalUnreadCountProvider = StreamProvider.family<int, String>((ref, userId
   final teamRoomsAsync = ref.watch(userTeamRoomsProvider(userId));
   final roomService = ref.watch(roomServiceProvider);
 
-  // Combine all rooms and calculate total unread count
-  return hostedRoomsAsync.when(
-    data: (hostedRooms) => joinedRoomsAsync.when(
-      data: (joinedRooms) => teamRoomsAsync.when(
-        data: (teamRooms) {
-          // Deduplicate rooms by code
-          final hostedCodes = hostedRooms.map((r) => r.code).toSet();
-          final joinedCodes = joinedRooms.map((r) => r.code).toSet();
+  // Use valueOrNull to get available data immediately, even during loading
+  // This fixes release build issue where nested .when() loading states never update
+  final hostedRooms = hostedRoomsAsync.valueOrNull ?? [];
+  final joinedRooms = joinedRoomsAsync.valueOrNull ?? [];
+  final teamRooms = teamRoomsAsync.valueOrNull ?? [];
 
-          // Get unique team rooms (not in hosted or joined)
-          final uniqueTeamRooms = teamRooms
-              .where((r) => !hostedCodes.contains(r.code) && !joinedCodes.contains(r.code))
-              .toList();
+  // Deduplicate rooms by code
+  final hostedCodes = hostedRooms.map((r) => r.code).toSet();
+  final joinedCodes = joinedRooms.map((r) => r.code).toSet();
 
-          // Combine all unique room codes
-          final allRoomCodes = <String>{
-            ...hostedCodes,
-            ...joinedCodes,
-            ...uniqueTeamRooms.map((r) => r.code),
-          };
+  // Get unique team rooms (not in hosted or joined)
+  final uniqueTeamRooms = teamRooms
+      .where((r) => !hostedCodes.contains(r.code) && !joinedCodes.contains(r.code))
+      .toList();
 
-          if (allRoomCodes.isEmpty) {
-            return Stream.value(0);
-          }
+  // Combine all unique room codes
+  final allRoomCodes = <String>{
+    ...hostedCodes,
+    ...joinedCodes,
+    ...uniqueTeamRooms.map((r) => r.code),
+  };
 
-          // Create a stream that combines unread counts from all rooms
-          return roomService.combinedUnreadCountStream(userId, allRoomCodes.toList());
-        },
-        loading: () => Stream.value(0),
-        error: (_, __) => Stream.value(0),
-      ),
-      loading: () => Stream.value(0),
-      error: (_, __) => Stream.value(0),
-    ),
-    loading: () => Stream.value(0),
-    error: (_, __) => Stream.value(0),
-  );
+  if (allRoomCodes.isEmpty) {
+    return Stream.value(0);
+  }
+
+  // Create a stream that combines unread counts from all rooms
+  return roomService.combinedUnreadCountStream(userId, allRoomCodes.toList());
 });
 
 /// Provider to check if a room has at least one correct answer
@@ -187,7 +180,8 @@ class RoomNotifier extends StateNotifier<AsyncValue<String?>> {
     await _roomService.submitPlayerAnswer(roomCode, playerId, answer);
   }
 
-  Future<void> sendMessage({
+  /// Sends a message to the room chat. Returns the message document ID.
+  Future<String> sendMessage({
     required String roomCode,
     required String playerId,
     required String playerName,
@@ -197,7 +191,7 @@ class RoomNotifier extends StateNotifier<AsyncValue<String?>> {
     String? replyToText,
     String? replyToPlayerName,
   }) async {
-    await _roomService.sendMessage(
+    return _roomService.sendMessage(
       roomCode: roomCode,
       playerId: playerId,
       playerName: playerName,

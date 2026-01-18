@@ -9,25 +9,57 @@ exports.evaluateAnswerWithAI = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "Must be authenticated to use this function");
     }
-    const { question, expectedAnswer, playerAnswer, roomCode, questionId, playerId } = data;
+    const { question, expectedAnswer, playerAnswer, roomCode, messageId, playerId } = data;
     if (!question || !expectedAnswer || !playerAnswer) {
         throw new functions.https.HttpsError("invalid-argument", "Missing required fields: question, expectedAnswer, playerAnswer");
     }
     try {
         const result = await (0, ai_evaluator_1.evaluateAnswer)(question, expectedAnswer, playerAnswer);
-        if (roomCode && questionId && playerId) {
-            await admin.firestore()
-                .collection("games")
+        // Update the chat message with AI evaluation result
+        if (roomCode && messageId) {
+            const messageRef = admin.firestore()
+                .collection("rooms")
                 .doc(roomCode)
-                .collection("questions")
-                .doc(questionId)
-                .collection("answers")
-                .doc(playerId)
-                .update({
+                .collection("chat")
+                .doc(messageId);
+            const updateData = {
                 aiSuggestion: result.isCorrect,
-            });
+                aiConfidence: result.confidence,
+                aiReasoning: result.explanation,
+            };
+            // Auto-mark if high confidence (>= 0.8)
+            if (result.confidence >= 0.8) {
+                updateData.isCorrect = result.isCorrect;
+                // Award points if marking as correct
+                if (result.isCorrect && playerId) {
+                    // Count existing correct answers in this room
+                    const correctAnswersSnapshot = await admin.firestore()
+                        .collection("rooms")
+                        .doc(roomCode)
+                        .collection("chat")
+                        .where("isCorrect", "==", true)
+                        .get();
+                    // First correct answer gets 1 point, others get 0.5
+                    const isFirstCorrect = correctAnswersSnapshot.docs.length === 0;
+                    const pointsToAdd = isFirstCorrect ? 1.0 : 0.5;
+                    // Update player's score
+                    await admin.firestore()
+                        .collection("rooms")
+                        .doc(roomCode)
+                        .collection("players")
+                        .doc(playerId)
+                        .update({
+                        score: admin.firestore.FieldValue.increment(pointsToAdd),
+                    });
+                }
+            }
+            await messageRef.update(updateData);
         }
-        return result;
+        return {
+            isCorrect: result.isCorrect,
+            confidence: result.confidence,
+            reasoning: result.explanation,
+        };
     }
     catch (error) {
         console.error("Error evaluating answer:", error);

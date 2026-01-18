@@ -1,7 +1,7 @@
 name: qoomy
 description: "Qoomy - Real-time multiplayer quiz game"
 publish_to: 'none'
-version: 1.0.0+26
+version: 1.0.0+29
 
 environment:
   sdk: ^3.5.4
@@ -18,6 +18,7 @@ dependencies:
   cloud_firestore: ^5.5.1
   cloud_functions: ^5.1.6
   firebase_messaging: ^15.1.6
+  firebase_crashlytics: ^4.3.3
 
   # State management
   flutter_riverpod: ^2.6.1

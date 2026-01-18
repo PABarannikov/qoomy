@@ -1,12 +1,19 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const Anthropic = require("@anthropic-ai/sdk").default;
 
 initializeApp();
 
 const db = getFirestore();
 const messaging = getMessaging();
+
+// Initialize Anthropic client
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY || "",
+});
 
 /**
  * Triggered when a new chat message is created in any room.
@@ -300,4 +307,193 @@ async function removeInvalidToken(token) {
   } catch (error) {
     console.error("Error removing invalid token:", error);
   }
+}
+
+/**
+ * AI-powered answer evaluation using Claude.
+ * Called when a player submits an answer in AI evaluation mode.
+ */
+exports.evaluateAnswerWithAI = onCall(
+  {
+    secrets: ["ANTHROPIC_API_KEY"],
+    timeoutSeconds: 30,
+    memory: "256MiB",
+  },
+  async (request) => {
+    // Verify authentication
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Must be authenticated to use this function"
+      );
+    }
+
+    const { question, expectedAnswer, playerAnswer, roomCode, messageId, playerId } = request.data;
+
+    if (!question || !expectedAnswer || !playerAnswer) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Missing required fields: question, expectedAnswer, playerAnswer"
+      );
+    }
+
+    try {
+      const result = await evaluateAnswer(question, expectedAnswer, playerAnswer);
+
+      // Update the chat message with AI evaluation result
+      if (roomCode && messageId) {
+        const messageRef = db
+          .collection("rooms")
+          .doc(roomCode)
+          .collection("chat")
+          .doc(messageId);
+
+        const updateData = {
+          aiSuggestion: result.isCorrect,
+          aiConfidence: result.confidence,
+          aiReasoning: result.explanation,
+        };
+
+        // Auto-mark if high confidence (>= 0.8)
+        if (result.confidence >= 0.8) {
+          updateData.isCorrect = result.isCorrect;
+
+          // Award points if marking as correct
+          if (result.isCorrect && playerId) {
+            // Count existing correct answers in this room
+            const correctAnswersSnapshot = await db
+              .collection("rooms")
+              .doc(roomCode)
+              .collection("chat")
+              .where("isCorrect", "==", true)
+              .get();
+
+            // First correct answer gets 1 point, others get 0.5
+            const isFirstCorrect = correctAnswersSnapshot.docs.length === 0;
+            const pointsToAdd = isFirstCorrect ? 1.0 : 0.5;
+
+            // Update player's score
+            await db
+              .collection("rooms")
+              .doc(roomCode)
+              .collection("players")
+              .doc(playerId)
+              .update({
+                score: FieldValue.increment(pointsToAdd),
+              });
+          }
+        }
+
+        await messageRef.update(updateData);
+      }
+
+      return {
+        isCorrect: result.isCorrect,
+        confidence: result.confidence,
+        reasoning: result.explanation,
+      };
+    } catch (error) {
+      console.error("Error evaluating answer:", error);
+      throw new HttpsError(
+        "internal",
+        "Failed to evaluate answer with AI"
+      );
+    }
+  }
+);
+
+/**
+ * Evaluate an answer using Claude AI.
+ */
+async function evaluateAnswer(question, expectedAnswer, playerAnswer) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.warn("ANTHROPIC_API_KEY not set, falling back to simple comparison");
+    return simpleEvaluation(expectedAnswer, playerAnswer);
+  }
+
+  try {
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 256,
+      messages: [
+        {
+          role: "user",
+          content: `You are evaluating quiz answers. Determine if the player's answer is semantically correct, even if not an exact match.
+
+Question: ${question}
+Expected Answer: ${expectedAnswer}
+Player Answer: ${playerAnswer}
+
+Respond with JSON only in this format:
+{"isCorrect": true/false, "confidence": 0.0-1.0, "explanation": "brief reason"}
+
+Be lenient with:
+- Spelling variations
+- Synonyms
+- Different phrasing
+- Abbreviations
+- Character aliases and alternative names (e.g., "Edmond Dantès" = "Count of Monte Cristo", birth name = title/known name)
+- The same person, character, or entity referred to by a different name (maiden name, pen name, stage name, nickname, title, etc.)
+
+Be strict about:
+- Fundamentally wrong answers
+- Different concepts
+- Unrelated responses`,
+        },
+      ],
+    });
+
+    const responseText =
+      message.content[0].type === "text" ? message.content[0].text : "";
+
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]);
+      return {
+        isCorrect: Boolean(result.isCorrect),
+        confidence: Number(result.confidence) || 0.5,
+        explanation: String(result.explanation) || "",
+      };
+    }
+
+    return simpleEvaluation(expectedAnswer, playerAnswer);
+  } catch (error) {
+    console.error("AI evaluation error:", error);
+    return simpleEvaluation(expectedAnswer, playerAnswer);
+  }
+}
+
+/**
+ * Simple string comparison fallback when AI is unavailable.
+ */
+function simpleEvaluation(expectedAnswer, playerAnswer) {
+  const normalizedExpected = expectedAnswer.toLowerCase().trim();
+  const normalizedPlayer = playerAnswer.toLowerCase().trim();
+
+  const isExactMatch = normalizedExpected === normalizedPlayer;
+  const containsAnswer =
+    normalizedPlayer.includes(normalizedExpected) ||
+    normalizedExpected.includes(normalizedPlayer);
+
+  if (isExactMatch) {
+    return {
+      isCorrect: true,
+      confidence: 1.0,
+      explanation: "Exact match",
+    };
+  }
+
+  if (containsAnswer && Math.abs(normalizedExpected.length - normalizedPlayer.length) < 5) {
+    return {
+      isCorrect: true,
+      confidence: 0.8,
+      explanation: "Close match",
+    };
+  }
+
+  return {
+    isCorrect: false,
+    confidence: 0.9,
+    explanation: "Does not match expected answer",
+  };
 }

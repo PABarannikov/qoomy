@@ -29,6 +29,10 @@ class BadgeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // CRITICAL: Must call startForeground immediately after startForegroundService
+        // to avoid ForegroundServiceDidNotStartInTimeException crash
+        startForeground(notificationId, buildNotification())
+
         when (intent?.action) {
             ACTION_SET_COUNT -> {
                 val count = intent.getIntExtra(EXTRA_COUNT, 0)
@@ -38,8 +42,7 @@ class BadgeService : Service() {
                 setBadgeCount(0)
             }
             else -> {
-                // Start as foreground service with initial notification
-                setBadgeCount(0)
+                // Service started, badge already at 0
             }
         }
 
@@ -79,20 +82,14 @@ class BadgeService : Service() {
         badgeCount = count
 
         if (badgeCount == 0) {
-            // Clear badge and remove notification
+            // Clear badge
             ShortcutBadger.removeCount(applicationContext)
-            // Stop foreground but keep service running
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                stopForeground(STOP_FOREGROUND_REMOVE)
-            } else {
-                @Suppress("DEPRECATION")
-                stopForeground(true)
-            }
+            // Update notification to show 0 (but keep foreground to avoid crash)
+            notificationManager.notify(notificationId, buildNotification())
         } else {
             // Update badge and notification
-            val notification = buildNotification()
-            startForeground(notificationId, notification)
             ShortcutBadger.applyCount(applicationContext, badgeCount)
+            notificationManager.notify(notificationId, buildNotification())
         }
     }
 

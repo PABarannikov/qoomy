@@ -277,7 +277,8 @@ class RoomService {
             snapshot.docs.map((doc) => ChatMessage.fromFirestore(doc)).toList());
   }
 
-  Future<void> sendMessage({
+  /// Sends a message to the room chat. Returns the message document ID.
+  Future<String> sendMessage({
     required String roomCode,
     required String playerId,
     required String playerName,
@@ -299,10 +300,12 @@ class RoomService {
       replyToPlayerName: replyToPlayerName,
     );
 
-    await _roomsCollection
+    final docRef = await _roomsCollection
         .doc(roomCode)
         .collection('chat')
         .add(message.toFirestore());
+
+    return docRef.id;
   }
 
   Future<void> markMessageAnswer({
