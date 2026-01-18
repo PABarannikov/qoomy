@@ -1159,21 +1159,39 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     setState(() => _isSending = true);
 
+    final answerText = _messageController.text.trim();
+
     // Prepare reply data if replying
     final replyToId = _replyingTo?.id;
     final replyToText = _replyingTo?.text;
     final replyToPlayerName = _replyingTo?.playerName;
 
-    await ref.read(roomNotifierProvider.notifier).sendMessage(
+    final messageId = await ref.read(roomNotifierProvider.notifier).sendMessage(
           roomCode: widget.roomCode,
           playerId: currentUser.id,
           playerName: currentUser.displayName,
-          text: _messageController.text.trim(),
+          text: answerText,
           type: type,
           replyToId: replyToId,
           replyToText: replyToText,
           replyToPlayerName: replyToPlayerName,
         );
+
+    // If this is an answer and room is in AI mode, trigger AI evaluation
+    if (type == MessageType.answer) {
+      final room = ref.read(roomProvider(widget.roomCode)).valueOrNull;
+      if (room != null && room.evaluationMode == EvaluationMode.ai) {
+        // Trigger AI evaluation in the background (don't await)
+        ref.read(aiServiceProvider).evaluateAnswer(
+          question: room.question,
+          expectedAnswer: room.answer,
+          playerAnswer: answerText,
+          roomCode: widget.roomCode,
+          messageId: messageId,
+          playerId: currentUser.id,
+        );
+      }
+    }
 
     if (mounted) {
       setState(() {
