@@ -88,6 +88,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildFilters(AppLocalizations l10n, String? userId) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dividerColor = isDark ? Colors.grey.shade600 : Colors.grey.shade300;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -119,7 +121,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onTap: () => setState(() => _roleFilter = RoleFilter.player),
               ),
               const SizedBox(width: 12),
-              Container(width: 1, height: 28, color: Colors.grey.shade300),
+              Container(width: 1, height: 28, color: dividerColor),
               const SizedBox(width: 12),
               // Status filter
               _buildIconFilterChip(
@@ -129,7 +131,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onTap: () => setState(() => _statusFilter = _statusFilter == StatusFilter.active ? StatusFilter.all : StatusFilter.active),
               ),
               const SizedBox(width: 12),
-              Container(width: 1, height: 28, color: Colors.grey.shade300),
+              Container(width: 1, height: 28, color: dividerColor),
               const SizedBox(width: 12),
               // Unread filter with badge
               _buildUnreadFilterChip(l10n, userId),
@@ -141,7 +143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _getFilterDescription(l10n),
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
           ),
         ),
         const SizedBox(height: 4),
@@ -352,7 +354,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // Note: Status filter (active) is applied in _buildRoomCard by checking hasCorrectAnswerProvider
             // Note: Unread filter is applied in _buildRoomCard by checking unreadCountProvider
 
-            allRooms.sort((a, b) => b.key.createdAt.compareTo(a.key.createdAt));
+            // Sort by most recent activity (lastMessageAt or createdAt)
+            allRooms.sort((a, b) => b.key.lastActivity.compareTo(a.key.lastActivity));
 
             if (allRooms.isEmpty) {
               // Check if we have rooms but they're filtered out
@@ -735,20 +738,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       await context.push('/game/${room.code}');
     }
 
-    // Force refresh unread count after returning from room
+    // Force refresh after returning from room
     if (mounted) {
       ref.invalidate(unreadCountProvider((roomCode: room.code, userId: userId)));
+      // Refresh room lists to update sorting by lastMessageAt
+      ref.invalidate(userHostedRoomsProvider(userId));
+      ref.invalidate(userJoinedRoomsProvider(userId));
+      ref.invalidate(userTeamRoomsProvider(userId));
     }
   }
 
   Widget _buildBottomButtons(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Colors.grey.shade900 : Colors.white,
         border: Border(
-          top: BorderSide(color: Colors.grey.shade200),
+          top: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade200),
         ),
       ),
       child: Row(
@@ -758,8 +766,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               onPressed: () => context.push('/join-room'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
-                side: BorderSide(color: Colors.grey.shade400),
-                foregroundColor: Colors.grey.shade700,
+                side: BorderSide(color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                foregroundColor: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
               ),
               child: Text(l10n.joinRoom, maxLines: 1),
             ),

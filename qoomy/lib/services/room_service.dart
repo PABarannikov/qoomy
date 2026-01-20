@@ -305,6 +305,11 @@ class RoomService {
         .collection('chat')
         .add(message.toFirestore());
 
+    // Update room's lastMessageAt for sorting
+    await _roomsCollection.doc(roomCode).update({
+      'lastMessageAt': Timestamp.fromDate(DateTime.now()),
+    });
+
     return docRef.id;
   }
 

@@ -75,6 +75,7 @@ class RoomModel {
   final String? teamId;
   final String? teamName;
   final DateTime createdAt;
+  final DateTime? lastMessageAt;
   final List<Player> players;
 
   RoomModel({
@@ -90,6 +91,7 @@ class RoomModel {
     this.teamId,
     this.teamName,
     required this.createdAt,
+    this.lastMessageAt,
     this.players = const [],
   });
 
@@ -114,6 +116,7 @@ class RoomModel {
       teamId: data['teamId'],
       teamName: data['teamName'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastMessageAt: (data['lastMessageAt'] as Timestamp?)?.toDate(),
       players: players,
     );
   }
@@ -131,8 +134,12 @@ class RoomModel {
       'teamId': teamId,
       'teamName': teamName,
       'createdAt': Timestamp.fromDate(createdAt),
+      if (lastMessageAt != null) 'lastMessageAt': Timestamp.fromDate(lastMessageAt!),
     };
   }
+
+  /// Returns the most recent activity time (lastMessageAt or createdAt)
+  DateTime get lastActivity => lastMessageAt ?? createdAt;
 
   bool get canStart => players.isNotEmpty && status == RoomStatus.waiting;
 
@@ -149,6 +156,7 @@ class RoomModel {
     String? teamId,
     String? teamName,
     DateTime? createdAt,
+    DateTime? lastMessageAt,
     List<Player>? players,
   }) {
     return RoomModel(
@@ -164,6 +172,7 @@ class RoomModel {
       teamId: teamId ?? this.teamId,
       teamName: teamName ?? this.teamName,
       createdAt: createdAt ?? this.createdAt,
+      lastMessageAt: lastMessageAt ?? this.lastMessageAt,
       players: players ?? this.players,
     );
   }

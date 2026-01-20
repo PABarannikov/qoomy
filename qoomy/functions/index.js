@@ -330,7 +330,11 @@ exports.evaluateAnswerWithAI = onCall(
 
     const { question, expectedAnswer, playerAnswer, roomCode, messageId, playerId } = request.data;
 
+    console.log(`AI Evaluation request: room=${roomCode}, messageId=${messageId}, playerId=${playerId}`);
+    console.log(`Question: "${question}", Expected: "${expectedAnswer}", Player: "${playerAnswer}"`);
+
     if (!question || !expectedAnswer || !playerAnswer) {
+      console.error(`Missing fields: question=${!!question}, expectedAnswer=${!!expectedAnswer}, playerAnswer=${!!playerAnswer}`);
       throw new HttpsError(
         "invalid-argument",
         "Missing required fields: question, expectedAnswer, playerAnswer"
@@ -372,15 +376,21 @@ exports.evaluateAnswerWithAI = onCall(
             const isFirstCorrect = correctAnswersSnapshot.docs.length === 0;
             const pointsToAdd = isFirstCorrect ? 1.0 : 0.5;
 
-            // Update player's score
-            await db
+            // Update player's score (use set with merge to handle new players)
+            const playerRef = db
               .collection("rooms")
               .doc(roomCode)
               .collection("players")
-              .doc(playerId)
-              .update({
+              .doc(playerId);
+
+            const playerDoc = await playerRef.get();
+            if (playerDoc.exists) {
+              await playerRef.update({
                 score: FieldValue.increment(pointsToAdd),
               });
+            } else {
+              console.warn(`Player document ${playerId} not found in room ${roomCode}, skipping score update`);
+            }
           }
         }
 

@@ -358,6 +358,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
     required IconData icon,
   }) {
     final isSelected = _selectedMode == mode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () => setState(() => _selectedMode = mode),
@@ -367,7 +368,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade300,
+            color: isSelected ? QoomyTheme.primaryColor : (isDark ? Colors.grey.shade600 : Colors.grey.shade300),
             width: isSelected ? 2 : 1,
           ),
           color: isSelected
@@ -381,12 +382,12 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? QoomyTheme.primaryColor
-                    : Colors.grey.shade200,
+                    : (isDark ? Colors.grey.shade700 : Colors.grey.shade200),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
-                color: isSelected ? Colors.white : Colors.grey.shade600,
+                color: isSelected ? Colors.white : (isDark ? Colors.grey.shade300 : Colors.grey.shade600),
               ),
             ),
             const SizedBox(width: 16),
@@ -400,7 +401,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                       fontWeight: FontWeight.bold,
                       color: isSelected
                           ? QoomyTheme.primaryColor
-                          : Colors.black87,
+                          : (isDark ? Colors.white : Colors.black87),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -408,7 +409,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                     description,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey.shade600,
+                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                     ),
                   ),
                 ],
@@ -474,6 +475,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
     // "No Team" is selected when _selectedTeamIds is empty
     final isSelected = _selectedTeamIds.isEmpty;
     final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -485,7 +487,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade300,
+              color: isSelected ? QoomyTheme.primaryColor : (isDark ? Colors.grey.shade600 : Colors.grey.shade300),
               width: isSelected ? 2 : 1,
             ),
             color: isSelected
@@ -496,8 +498,8 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: Colors.grey.shade200,
-                child: Icon(Icons.group_off, color: Colors.grey.shade600),
+                backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                child: Icon(Icons.group_off, color: isDark ? Colors.grey.shade300 : Colors.grey.shade600),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -507,7 +509,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                     fontWeight: FontWeight.bold,
                     color: isSelected
                         ? QoomyTheme.primaryColor
-                        : Colors.black87,
+                        : (isDark ? Colors.white : Colors.black87),
                   ),
                 ),
               ),
@@ -526,6 +528,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   Widget _buildTeamCard(TeamModel team) {
     final isSelected = _selectedTeamIds.contains(team.id);
     final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -545,7 +548,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade300,
+              color: isSelected ? QoomyTheme.primaryColor : (isDark ? Colors.grey.shade600 : Colors.grey.shade300),
               width: isSelected ? 2 : 1,
             ),
             color: isSelected
@@ -576,15 +579,15 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                         fontWeight: FontWeight.bold,
                         color: isSelected
                             ? QoomyTheme.primaryColor
-                            : Colors.black87,
+                            : (isDark ? Colors.white : Colors.black87),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${team.memberCount} ${l10n.members.toLowerCase()}',
+                      l10n.membersCount(team.memberCount),
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                       ),
                     ),
                   ],

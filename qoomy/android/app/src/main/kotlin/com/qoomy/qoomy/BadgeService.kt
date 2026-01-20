@@ -68,28 +68,34 @@ class BadgeService : Service() {
     }
 
     private fun buildNotification(): android.app.Notification {
-        return NotificationCompat.Builder(this, channelId)
+        val builder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Qoomy")
-            .setContentText("Unread messages: $badgeCount")
-            .setNumber(badgeCount)
+            .setContentText(if (badgeCount > 0) "Unread messages: $badgeCount" else "No unread messages")
             .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
             .setOngoing(true)
-            .build()
+
+        // Only set number if > 0, otherwise badge shows incorrectly
+        if (badgeCount > 0) {
+            builder.setNumber(badgeCount)
+        }
+
+        return builder.build()
     }
 
     private fun setBadgeCount(count: Int) {
         badgeCount = count
 
         if (badgeCount == 0) {
-            // Clear badge
+            // Clear badge and hide notification
             ShortcutBadger.removeCount(applicationContext)
-            // Update notification to show 0 (but keep foreground to avoid crash)
-            notificationManager.notify(notificationId, buildNotification())
+            // Stop foreground but keep service running, remove notification
+            stopForeground(STOP_FOREGROUND_REMOVE)
         } else {
-            // Update badge and notification
+            // Update badge and show notification
             ShortcutBadger.applyCount(applicationContext, badgeCount)
-            notificationManager.notify(notificationId, buildNotification())
+            // Re-enter foreground mode with notification
+            startForeground(notificationId, buildNotification())
         }
     }
 

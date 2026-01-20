@@ -14,6 +14,9 @@ class AiService {
     required String messageId,
     required String playerId,
   }) async {
+    print('🤖 AI: Starting evaluation for message $messageId in room $roomCode');
+    print('🤖 AI: Question: "$question", Expected: "$expectedAnswer", Player: "$playerAnswer"');
+
     try {
       final callable = _functions.httpsCallable('evaluateAnswerWithAI');
       final result = await callable.call({
@@ -26,12 +29,14 @@ class AiService {
       });
 
       final data = result.data as Map<String, dynamic>;
+      print('🤖 AI: Success! isCorrect=${data['isCorrect']}, confidence=${data['confidence']}');
       return AiEvaluation(
         isCorrect: data['isCorrect'] as bool,
         confidence: (data['confidence'] as num).toDouble(),
         reasoning: data['reasoning'] as String?,
       );
     } catch (e) {
+      print('🤖 AI: ERROR - $e');
       // Return null evaluation on error - host will decide manually
       return AiEvaluation(
         isCorrect: null,

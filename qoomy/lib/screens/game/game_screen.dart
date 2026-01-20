@@ -24,12 +24,16 @@ class GameScreen extends ConsumerStatefulWidget {
 class _GameScreenState extends ConsumerState<GameScreen> {
   bool _questionCollapsed = false; // Collapsed when user scrolls down
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _questionScrollController = ScrollController(); // For question card inner scroll
   final TextEditingController _messageController = TextEditingController();
   bool _isSending = false;
   ChatMessage? _replyingTo; // Message being replied to
   bool _initialScrollDone = false; // Track if we've scrolled on initial load
   bool _hasRetried = false; // Track if we've retried after permission error
   String? _lastRetryRoomCode; // Track which room we retried for
+  double _lastScrollOffset = 0; // Track last scroll position for direction detection
+  double _cumulativeUpScroll = 0; // Track cumulative upward scroll
+  bool _questionCardAtBottom = false; // Track if question card scroll is at bottom
 
   // Check if running on desktop (Enter sends message) vs mobile (Enter creates newline)
   bool get _isDesktopPlatform {
@@ -43,6 +47,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _questionScrollController.addListener(_onQuestionScroll);
     // Mark room as read and scroll to bottom when entering
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _markAsRead();
@@ -62,21 +67,72 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   @override
   void dispose() {
-    // Mark as read one more time when leaving to ensure badge is cleared
-    _markAsRead();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _questionScrollController.removeListener(_onQuestionScroll);
+    _questionScrollController.dispose();
     _messageController.dispose();
     super.dispose();
+  }
+
+  // Track when question card scroll reaches bottom
+  void _onQuestionScroll() {
+    if (!_questionScrollController.hasClients) return;
+    final pos = _questionScrollController.position;
+    final atBottom = pos.pixels >= pos.maxScrollExtent - 5; // 5px tolerance
+    if (atBottom != _questionCardAtBottom) {
+      setState(() => _questionCardAtBottom = atBottom);
+    }
   }
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
 
-    // Collapse question when user scrolls down more than 50 pixels
-    final shouldCollapse = _scrollController.offset > 50;
-    if (shouldCollapse != _questionCollapsed) {
-      setState(() => _questionCollapsed = shouldCollapse);
+    final currentOffset = _scrollController.offset;
+    final scrollDelta = currentOffset - _lastScrollOffset;
+
+    // Collapse on downward scroll (> 20 pixels delta)
+    if (scrollDelta > 20 && !_questionCollapsed) {
+      setState(() => _questionCollapsed = true);
+      _cumulativeUpScroll = 0;
+      _lastScrollOffset = currentOffset;
+    }
+  }
+
+  // Handle pointer move events (works alongside ListView scrolling)
+  void _onPointerMove(PointerMoveEvent event) {
+    final delta = event.delta.dy; // positive = finger moving down, negative = finger moving up
+
+    // Check if question card content is scrollable (has more content than visible)
+    final questionScrollable = _questionScrollController.hasClients &&
+        _questionScrollController.position.maxScrollExtent > 0;
+
+    // Collapse when dragging up (finger moves up, content scrolls down)
+    // Only collapse if: question card is not scrollable OR it's already at the bottom
+    if (delta < -3 && !_questionCollapsed) {
+      final canCollapse = !questionScrollable || _questionCardAtBottom;
+      if (canCollapse) {
+        _cumulativeUpScroll -= delta; // accumulate upward movement
+        if (_cumulativeUpScroll > 30) {
+          setState(() => _questionCollapsed = true);
+          _cumulativeUpScroll = 0;
+        }
+      }
+    }
+    // Track cumulative downward gesture when collapsed (finger moves down = scroll up)
+    else if (delta > 0 && _questionCollapsed) {
+      setState(() {
+        _cumulativeUpScroll += delta;
+        // Uncollapse after 150 pixels of cumulative downward finger movement
+        if (_cumulativeUpScroll > 150) {
+          _questionCollapsed = false;
+          _cumulativeUpScroll = 0;
+        }
+      });
+    }
+    // Reset if finger moves up while collapsed
+    else if (delta < -3 && _questionCollapsed) {
+      setState(() => _cumulativeUpScroll = 0);
     }
   }
 
@@ -117,6 +173,21 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           curve: Curves.easeOut,
         );
       }
+    });
+  }
+
+  void _onInputTap() {
+    if (!_questionCollapsed) {
+      setState(() => _questionCollapsed = true);
+    }
+    // Delay scroll to allow keyboard to appear and layout to adjust
+    // First scroll after initial layout change
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) _scrollToBottom();
+    });
+    // Second scroll after keyboard is fully visible
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) _scrollToBottom();
     });
   }
 
@@ -207,43 +278,54 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Combined: user can see answer if they got it right OR revealed it
     final canSeeAnswer = hasCorrectAnswer || hasRevealedAnswer;
 
+    // Check if messages are empty to determine layout
+    final hasMessages = chatAsync.whenOrNull(data: (messages) => messages.isNotEmpty) ?? false;
+
     return Column(
       children: [
         // Header with back button, access code, and profile menu
         _buildHeader(context, room, l10n, isHost),
 
-        // Question card (and answer for host or winner) - takes only needed space
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildQuestionCard(room, isHost, l10n),
-              if (isHost)
-                _buildAnswerSection(room, l10n, isHost: true, hasRevealed: false)
-              else if (canSeeAnswer)
-                _buildAnswerSection(room, l10n, isHost: false, hasRevealed: hasRevealedAnswer && !hasCorrectAnswer),
-            ],
-          ),
-        ),
-
-        // Chat section - fills remaining space
-        Expanded(
-          child: chatAsync.when(
-            data: (messages) => _buildChatSection(
-              messages,
-              room.evaluationMode == EvaluationMode.ai,
-              room.hostId,
-              currentUser?.id,
-              isHost,
-              l10n,
-              canSeeAnswer: canSeeAnswer,
+        // Scrollable content area (question + answer + chat)
+        // Use Expanded only when there are messages, otherwise let it size to content
+        if (hasMessages)
+          Expanded(
+            child: Listener(
+              onPointerMove: _onPointerMove,
+              child: chatAsync.when(
+                data: (messages) => _buildScrollableContent(
+                  room,
+                  messages,
+                  isHost,
+                  canSeeAnswer,
+                  hasRevealedAnswer && !hasCorrectAnswer,
+                  currentUser?.id,
+                  l10n,
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => _buildErrorOrRetry(e),
+              ),
             ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => _buildErrorOrRetry(e),
+          )
+        else
+          Expanded(
+            child: Listener(
+              onPointerMove: _onPointerMove,
+              child: chatAsync.when(
+                data: (messages) => _buildScrollableContent(
+                  room,
+                  messages,
+                  isHost,
+                  canSeeAnswer,
+                  hasRevealedAnswer && !hasCorrectAnswer,
+                  currentUser?.id,
+                  l10n,
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => _buildErrorOrRetry(e),
+              ),
+            ),
           ),
-        ),
 
         // Message input (different for host and player)
         if (isHost)
@@ -251,6 +333,136 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         else
           _buildPlayerMessageInput(currentUser, l10n, cannotAnswer: canSeeAnswer),
       ],
+    );
+  }
+
+  Widget _buildScrollableContent(
+    RoomModel room,
+    List<ChatMessage> messages,
+    bool isHost,
+    bool canSeeAnswer,
+    bool hasRevealed,
+    String? currentUserId,
+    AppLocalizations l10n,
+  ) {
+    final isAiMode = room.evaluationMode == EvaluationMode.ai;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxHeaderHeight = screenHeight * 0.65; // Max 65% of screen for header
+
+    // Build the header widget
+    Widget buildHeader() {
+      // Reset scroll to top when collapsed
+      if (_questionCollapsed && _questionScrollController.hasClients && _questionScrollController.offset > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_questionScrollController.hasClients) {
+            _questionScrollController.jumpTo(0);
+          }
+        });
+      }
+
+      return AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        alignment: Alignment.topCenter,
+        child: SizedBox(
+          height: _questionCollapsed ? 120 : null, // Show header + ~2 lines of question text
+          child: _questionCollapsed
+              ? ClipRect(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    heightFactor: null,
+                    child: _buildQuestionCard(room, isHost, l10n),
+                  ),
+                )
+              : ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: maxHeaderHeight),
+                  child: SingleChildScrollView(
+                    controller: _questionScrollController,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildQuestionCard(room, isHost, l10n),
+                        if (isHost)
+                          _buildAnswerSection(room, l10n, isHost: true, hasRevealed: false)
+                        else if (canSeeAnswer)
+                          _buildAnswerSection(room, l10n, isHost: false, hasRevealed: hasRevealed),
+                      ],
+                    ),
+                  ),
+                ),
+        ),
+      );
+    }
+
+    // When no messages, show header at top and "no messages" at bottom
+    if (messages.isEmpty) {
+      return GestureDetector(
+        // Make entire area detect vertical drags for uncollapse gesture
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragUpdate: (details) {
+          // Downward drag (finger moves down) to uncollapse
+          if (details.delta.dy > 0 && _questionCollapsed) {
+            setState(() {
+              _cumulativeUpScroll += details.delta.dy;
+              if (_cumulativeUpScroll > 150) {
+                _questionCollapsed = false;
+                _cumulativeUpScroll = 0;
+              }
+            });
+          } else if (details.delta.dy < -3 && _questionCollapsed) {
+            setState(() => _cumulativeUpScroll = 0);
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              buildHeader(),
+              const Spacer(),
+              Text(
+                l10n.noMessagesYet,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // When there are messages, use ListView
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: messages.length + 1, // +1 for the header (question/answer)
+      itemBuilder: (context, index) {
+        // First item is the question/answer header
+        if (index == 0) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              buildHeader(),
+              const SizedBox(height: 16),
+              Divider(color: Colors.grey.shade300, height: 1),
+            ],
+          );
+        }
+
+        // Chat messages
+        final message = messages[index - 1];
+        final isMe = isHost ? message.playerId == room.hostId : message.playerId == currentUserId;
+        return _buildMessageBubble(
+          message,
+          isMe: isMe,
+          isAiMode: isAiMode,
+          isHost: isHost,
+          currentUserId: currentUserId,
+          l10n: l10n,
+          canSeeAnswer: canSeeAnswer,
+          allMessages: messages,
+        );
+      },
     );
   }
 
@@ -308,16 +520,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Widget _buildQuestionCard(RoomModel room, bool isHost, AppLocalizations l10n) {
-    // Check if question is long or has an image (both make the card collapsible)
     final hasImage = room.imageUrl != null && room.imageUrl!.isNotEmpty;
-    final isLongQuestion = room.question.length > 80;
-    final isCollapsible = isLongQuestion || hasImage;
-    // Show full question by default, collapse only when scrolled down and content is collapsible
-    final showCollapsed = _questionCollapsed && isCollapsible;
-
-    // Calculate max height based on screen size (40% of screen height when expanded)
-    final screenHeight = MediaQuery.of(context).size.height;
-    final maxExpandedHeight = screenHeight * 0.4;
 
     return Card(
       color: QoomyTheme.primaryColor,
@@ -336,24 +539,24 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 const Spacer(),
-                if (isCollapsible)
-                  IconButton(
-                    onPressed: () => setState(() => _questionCollapsed = !_questionCollapsed),
-                    icon: Icon(
-                      showCollapsed ? Icons.expand_more : Icons.expand_less,
-                      color: Colors.white,
-                    ),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white24,
-                      padding: const EdgeInsets.all(4),
-                      minimumSize: const Size(32, 32),
-                    ),
-                    tooltip: showCollapsed ? l10n.show : l10n.hide,
+                // Collapse button always visible
+                IconButton(
+                  onPressed: () => setState(() => _questionCollapsed = !_questionCollapsed),
+                  icon: Icon(
+                    _questionCollapsed ? Icons.expand_more : Icons.expand_less,
+                    color: Colors.white,
                   ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white24,
+                    padding: const EdgeInsets.all(4),
+                    minimumSize: const Size(32, 32),
+                  ),
+                  tooltip: _questionCollapsed ? l10n.show : l10n.hide,
+                ),
               ],
             ),
-            // Team name on new line
-            if (room.teamName != null) ...[
+            // Team name on new line (hidden when collapsed)
+            if (room.teamName != null && !_questionCollapsed) ...[
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -379,40 +582,24 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               ),
             ],
             const SizedBox(height: 8),
-            // Scrollable content area for question text and image
-            AnimatedSize(
-              duration: const Duration(milliseconds: 200),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: showCollapsed ? 50 : maxExpandedHeight,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Question text
-                      Text(
-                        room.question,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      // Image - tappable to open fullscreen viewer
-                      if (hasImage && !showCollapsed) ...[
-                        const SizedBox(height: 12),
-                        ZoomableImageViewer(
-                          imageUrl: room.imageUrl!,
-                          fit: BoxFit.contain,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+            // Question text - full height, no scroll
+            Text(
+              room.question,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
+            // Image - tappable to open fullscreen viewer
+            if (hasImage) ...[
+              const SizedBox(height: 12),
+              ZoomableImageViewer(
+                imageUrl: room.imageUrl!,
+                fit: BoxFit.contain,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ],
           ],
         ),
       ),
@@ -439,121 +626,73 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       headerColor = Colors.amber;
     }
 
-    // Hide when question is collapsed
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 200),
-      child: _questionCollapsed
-          ? const SizedBox.shrink()
-          : Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Card(
-                color: headerColor.withOpacity(0.1),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            headerIcon,
-                            color: headerColor,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            headerText,
-                            style: TextStyle(
-                              color: isHost ? QoomyTheme.successColor : (hasRevealed ? Colors.orange.shade700 : Colors.amber.shade700),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                          if (isHost) ...[
-                            const Spacer(),
-                            Icon(Icons.visibility_off, color: Colors.grey.shade400, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              l10n.onlyHostCanSee,
-                              style: TextStyle(
-                                color: Colors.grey.shade500,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(room.answer, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                      if (room.comment != null && room.comment!.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          room.comment!,
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                        ),
-                      ],
-                    ],
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Card(
+        color: headerColor.withOpacity(0.1),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    headerIcon,
+                    color: headerColor,
+                    size: 20,
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      headerText,
+                      style: TextStyle(
+                        color: isHost ? QoomyTheme.successColor : (hasRevealed ? Colors.orange.shade700 : Colors.amber.shade700),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isHost) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.visibility_off, color: Colors.grey.shade400, size: 16),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        l10n.onlyHostCanSee,
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 11,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ),
-    );
-  }
-
-  Widget _buildChatSection(
-    List<ChatMessage> messages,
-    bool isAiMode,
-    String hostId,
-    String? currentUserId,
-    bool isHost,
-    AppLocalizations l10n, {
-    bool canSeeAnswer = false,
-  }) {
-    if (messages.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
-            Text(
-              'No messages yet',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isHost ? 'Players can send comments or answers' : 'Send an answer or comment below',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(room.answer, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              if (room.comment != null && room.comment!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  room.comment!,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                ),
+              ],
+            ],
+          ),
         ),
-      );
-    }
-
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: messages.length,
-      itemBuilder: (context, index) {
-        final message = messages[index];
-        final isMe = isHost ? message.playerId == hostId : message.playerId == currentUserId;
-        return _buildMessageBubble(
-          message,
-          isMe: isMe,
-          isAiMode: isAiMode,
-          isHost: isHost,
-          currentUserId: currentUserId,
-          l10n: l10n,
-          canSeeAnswer: canSeeAnswer,
-          allMessages: messages,
-        );
-      },
+      ),
     );
   }
 
   Widget _buildMessageBubble(ChatMessage message, {bool isMe = false, bool isAiMode = false, bool isHost = false, String? currentUserId, required AppLocalizations l10n, bool canSeeAnswer = false, List<ChatMessage>? allMessages}) {
     final isAnswer = message.type == MessageType.answer;
     final isMarked = message.isCorrect != null;
+    // Consider AI evaluation "timed out" if message is older than 30 seconds and not marked
+    final isAiTimedOut = isAiMode && isAnswer && !isMarked &&
+        DateTime.now().difference(message.sentAt).inSeconds > 30;
 
     // Determine if the answer should be hidden (applies to both AI and manual mode)
     // Hidden if: answer type + (not evaluated yet OR correct)
@@ -565,20 +704,23 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         message.playerId != currentUserId &&
         (message.isCorrect == null || message.isCorrect == true);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     Color backgroundColor;
     if (shouldHideAnswer) {
       // Hidden answer style - dark/mysterious
-      backgroundColor = Colors.grey.shade800;
+      backgroundColor = isDark ? Colors.grey.shade900 : Colors.grey.shade800;
     } else if (isAnswer) {
       if (isMarked) {
         backgroundColor = message.isCorrect!
-            ? QoomyTheme.successColor.withOpacity(0.1)
-            : QoomyTheme.errorColor.withOpacity(0.1);
+            ? QoomyTheme.successColor.withOpacity(isDark ? 0.2 : 0.1)
+            : QoomyTheme.errorColor.withOpacity(isDark ? 0.2 : 0.1);
       } else {
-        backgroundColor = QoomyTheme.primaryColor.withOpacity(0.1);
+        backgroundColor = QoomyTheme.primaryColor.withOpacity(isDark ? 0.2 : 0.1);
       }
     } else {
-      backgroundColor = isMe ? QoomyTheme.primaryColor.withOpacity(0.15) : Colors.grey.shade100;
+      backgroundColor = isMe
+          ? QoomyTheme.primaryColor.withOpacity(isDark ? 0.25 : 0.15)
+          : (isDark ? Colors.grey.shade800 : Colors.grey.shade100);
     }
 
     return Align(
@@ -706,39 +848,43 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               ),
 
 
-              // Host-only: Mark buttons for answers (only in manual mode)
-              if (isHost && !isAiMode && isAnswer && !isMarked) ...[
+              // Host-only: Mark buttons for answers (in manual mode OR when AI timed out)
+              if (isHost && (!isAiMode || isAiTimedOut) && isAnswer && !isMarked) ...[
                 const SizedBox(height: 8),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _markAnswer(message.id, false),
-                      icon: const Icon(Icons.close, size: 16),
-                      label: Text(l10n.wrong),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: QoomyTheme.errorColor,
-                        side: const BorderSide(color: QoomyTheme.errorColor),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    Flexible(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _markAnswer(message.id, false),
+                        icon: const Icon(Icons.close, size: 16),
+                        label: Text(l10n.wrong, overflow: TextOverflow.ellipsis),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: QoomyTheme.errorColor,
+                          side: const BorderSide(color: QoomyTheme.errorColor),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () => _markAnswer(message.id, true),
-                      icon: const Icon(Icons.check, size: 16),
-                      label: Text(l10n.correct),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: QoomyTheme.successColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    Flexible(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _markAnswer(message.id, true),
+                        icon: const Icon(Icons.check, size: 16),
+                        label: Text(l10n.correct, overflow: TextOverflow.ellipsis),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: QoomyTheme.successColor,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ],
 
-              // Waiting for AI indicator (in AI mode, answer not yet marked)
+              // Waiting for AI indicator (in AI mode, answer not yet marked, not timed out)
               // Only show for own answers or host - not for hidden answers
-              if (isAiMode && isAnswer && !isMarked && !shouldHideAnswer) ...[
+              if (isAiMode && isAnswer && !isMarked && !shouldHideAnswer && !isAiTimedOut) ...[
                 const SizedBox(height: 6),
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -922,10 +1068,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Widget _buildHostMessageInput(RoomModel room, AppLocalizations l10n) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+        color: isDark ? Colors.grey.shade900 : Colors.white,
+        border: Border(top: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -963,6 +1110,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                           },
                           child: TextField(
                             controller: _messageController,
+                            onTap: _onInputTap,
                             decoration: InputDecoration(
                               hintText: l10n.typeComment,
                               border: OutlineInputBorder(
@@ -970,7 +1118,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                                 borderSide: BorderSide.none,
                               ),
                               filled: true,
-                              fillColor: Colors.grey.shade100,
+                              fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             ),
                             enabled: !_isSending,
@@ -981,6 +1129,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         )
                       : TextField(
                           controller: _messageController,
+                          onTap: _onInputTap,
                           decoration: InputDecoration(
                             hintText: l10n.typeComment,
                             border: OutlineInputBorder(
@@ -988,7 +1137,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               borderSide: BorderSide.none,
                             ),
                             filled: true,
-                            fillColor: Colors.grey.shade100,
+                            fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           enabled: !_isSending,
@@ -1017,10 +1166,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Widget _buildPlayerMessageInput(dynamic currentUser, AppLocalizations l10n, {bool cannotAnswer = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+        color: isDark ? Colors.grey.shade900 : Colors.white,
+        border: Border(top: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1046,6 +1196,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                           },
                           child: TextField(
                             controller: _messageController,
+                            onTap: _onInputTap,
                             decoration: InputDecoration(
                               hintText: cannotAnswer ? l10n.typeMessageOnly : l10n.typeMessage,
                               border: OutlineInputBorder(
@@ -1053,7 +1204,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                                 borderSide: BorderSide.none,
                               ),
                               filled: true,
-                              fillColor: Colors.grey.shade100,
+                              fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             ),
                             enabled: !_isSending,
@@ -1064,6 +1215,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         )
                       : TextField(
                           controller: _messageController,
+                          onTap: _onInputTap,
                           decoration: InputDecoration(
                             hintText: cannotAnswer ? l10n.typeMessageOnly : l10n.typeMessage,
                             border: OutlineInputBorder(
@@ -1071,7 +1223,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               borderSide: BorderSide.none,
                             ),
                             filled: true,
-                            fillColor: Colors.grey.shade100,
+                            fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           enabled: !_isSending,

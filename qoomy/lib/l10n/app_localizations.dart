@@ -380,7 +380,7 @@ class AppLocalizations {
       'longPressToReply': 'Долгое нажатие для ответа на сообщение',
 
       // Host screen
-      'accessCode': 'Код доступа',
+      'accessCode': 'Код вопроса',
       'codeCopied': 'Код скопирован!',
       'hostPanel': 'Панель ведущего',
       'players': 'Игроки',
@@ -685,6 +685,28 @@ class AppLocalizations {
   String get playerQuestions => get('playerQuestions');
   String get activeOnly => get('activeOnly');
   String get unreadOnly => get('unreadOnly');
+
+  /// Returns the correct plural form for "members" based on the count
+  /// Russian has 3 plural forms: 1 участник, 2-4 участника, 5+ участников
+  String membersCount(int count) {
+    if (locale.languageCode == 'ru') {
+      final mod10 = count % 10;
+      final mod100 = count % 100;
+
+      if (mod100 >= 11 && mod100 <= 19) {
+        return '$count участников';
+      } else if (mod10 == 1) {
+        return '$count участник';
+      } else if (mod10 >= 2 && mod10 <= 4) {
+        return '$count участника';
+      } else {
+        return '$count участников';
+      }
+    } else {
+      // English
+      return count == 1 ? '$count member' : '$count members';
+    }
+  }
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

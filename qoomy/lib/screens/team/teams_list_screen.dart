@@ -190,7 +190,7 @@ class TeamsListScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${team.memberCount} ${l10n.members.toLowerCase()}',
+                      l10n.membersCount(team.memberCount),
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade600,

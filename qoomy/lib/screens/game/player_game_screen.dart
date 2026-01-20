@@ -148,13 +148,15 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
         ),
 
         // Divider
-        Container(
+        Builder(builder: (context) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
             border: Border(
-              top: BorderSide(color: Colors.grey.shade300),
-              bottom: BorderSide(color: Colors.grey.shade300),
+              top: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+              bottom: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
             ),
           ),
           child: Row(
@@ -294,6 +296,9 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
   Widget _buildMessageBubble(ChatMessage message, bool isMe, {bool isAiMode = false, required AppLocalizations l10n, List<ChatMessage>? allMessages}) {
     final isAnswer = message.type == MessageType.answer;
     final isMarked = message.isCorrect != null;
+    // Consider AI evaluation "timed out" if message is older than 30 seconds and not marked
+    final isAiTimedOut = isAiMode && isAnswer && !isMarked &&
+        DateTime.now().difference(message.sentAt).inSeconds > 30;
 
     Color backgroundColor;
     if (isAnswer) {
@@ -305,7 +310,10 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
         backgroundColor = QoomyTheme.primaryColor.withOpacity(0.1);
       }
     } else {
-      backgroundColor = isMe ? QoomyTheme.primaryColor.withOpacity(0.15) : Colors.grey.shade100;
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      backgroundColor = isMe
+          ? QoomyTheme.primaryColor.withOpacity(isDark ? 0.25 : 0.15)
+          : (isDark ? Colors.grey.shade800 : Colors.grey.shade100);
     }
 
     return Align(
@@ -392,8 +400,8 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                       const SizedBox(height: 8),
                     ],
                     Text(message.text, style: const TextStyle(fontSize: 15)),
-                    // AI evaluating indicator (only for answers not yet marked in AI mode)
-                    if (isAiMode && isAnswer && !isMarked) ...[
+                    // AI evaluating indicator (only for answers not yet marked in AI mode, not timed out)
+                    if (isAiMode && isAnswer && !isMarked && !isAiTimedOut) ...[
                       const SizedBox(height: 8),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -416,6 +424,18 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                             ),
                           ),
                         ],
+                      ),
+                    ],
+                    // AI timed out indicator
+                    if (isAiTimedOut) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'AI evaluation timed out',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange.shade700,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ],
                     // Result indicator (after marked)
@@ -565,10 +585,11 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
   }
 
   Widget _buildMessageInput(dynamic currentUser, AppLocalizations l10n) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+        color: isDark ? Colors.grey.shade900 : Colors.white,
+        border: Border(top: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -601,7 +622,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                                 borderSide: BorderSide.none,
                               ),
                               filled: true,
-                              fillColor: Colors.grey.shade100,
+                              fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             ),
                             enabled: !_isSending,
@@ -619,7 +640,7 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
                               borderSide: BorderSide.none,
                             ),
                             filled: true,
-                            fillColor: Colors.grey.shade100,
+                            fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           enabled: !_isSending,

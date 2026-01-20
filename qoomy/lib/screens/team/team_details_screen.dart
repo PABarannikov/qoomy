@@ -97,13 +97,16 @@ class TeamDetailsScreen extends ConsumerWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    '${team.memberCount} ${l10n.members.toLowerCase()}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
+                  Builder(builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    return Text(
+                      l10n.membersCount(team.memberCount),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),
@@ -147,38 +150,49 @@ class TeamDetailsScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'qoomy.online/join-team/${team.inviteCode}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                  Builder(builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    return InkWell(
+                      onTap: () {
+                        final inviteUrl = 'https://qoomy.online/join-team/${team.inviteCode}';
+                        Clipboard.setData(ClipboardData(text: inviteUrl));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.inviteCodeCopied)),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.copy),
-                          onPressed: () {
-                            final inviteUrl = 'https://qoomy.online/join-team/${team.inviteCode}';
-                            Clipboard.setData(ClipboardData(text: inviteUrl));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(l10n.inviteCodeCopied)),
-                            );
-                          },
-                          tooltip: l10n.inviteCodeCopied,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              team.inviteCode,
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Icon(
+                              Icons.copy,
+                              size: 20,
+                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  }),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -313,27 +327,25 @@ class TeamDetailsScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Text(
-                      member.name,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    if (isCurrentUser) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        '(${l10n.you})',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
-                    ],
-                  ],
+                Flexible(
+                  child: Text(
+                    member.name,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                if (isCurrentUser) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    '(${l10n.you})',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
