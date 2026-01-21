@@ -8,11 +8,17 @@ class PushNotificationService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static String? _currentUserId;
 
-  /// Initialize push notifications for iOS only
+  /// Initialize push notifications for iOS and Android
   static Future<void> init(String userId) async {
-    // Only initialize for iOS (skip on web and other platforms)
-    if (kIsWeb || !Platform.isIOS) {
-      debugPrint('Push notifications: Skipping - not iOS (kIsWeb=$kIsWeb)');
+    // Skip on web
+    if (kIsWeb) {
+      debugPrint('Push notifications: Skipping - web platform');
+      return;
+    }
+
+    // Only initialize for iOS and Android
+    if (!Platform.isIOS && !Platform.isAndroid) {
+      debugPrint('Push notifications: Skipping - unsupported platform');
       return;
     }
 
@@ -58,15 +64,17 @@ class PushNotificationService {
       debugPrint('FCM: Requesting token...');
 
       // On iOS, we need the APNs token first
-      final apnsToken = await _messaging.getAPNSToken();
-      debugPrint('FCM: APNs token: ${apnsToken != null ? "obtained (${apnsToken.length} chars)" : "NULL"}');
+      if (Platform.isIOS) {
+        final apnsToken = await _messaging.getAPNSToken();
+        debugPrint('FCM: APNs token: ${apnsToken != null ? "obtained (${apnsToken.length} chars)" : "NULL"}');
 
-      if (apnsToken == null) {
-        debugPrint('FCM: No APNs token - waiting and retrying...');
-        // Wait a bit and retry - APNs token may not be ready immediately
-        await Future.delayed(const Duration(seconds: 2));
-        final retryApns = await _messaging.getAPNSToken();
-        debugPrint('FCM: APNs token retry: ${retryApns != null ? "obtained" : "still NULL"}');
+        if (apnsToken == null) {
+          debugPrint('FCM: No APNs token - waiting and retrying...');
+          // Wait a bit and retry - APNs token may not be ready immediately
+          await Future.delayed(const Duration(seconds: 2));
+          final retryApns = await _messaging.getAPNSToken();
+          debugPrint('FCM: APNs token retry: ${retryApns != null ? "obtained" : "still NULL"}');
+        }
       }
 
       final token = await _messaging.getToken();
@@ -75,7 +83,7 @@ class PushNotificationService {
       if (token != null) {
         await _saveTokenToFirestore(token);
       } else {
-        debugPrint('FCM: Failed to get FCM token - check APNs configuration');
+        debugPrint('FCM: Failed to get FCM token');
       }
     } catch (e, st) {
       debugPrint('Error getting FCM token: $e');
@@ -87,6 +95,8 @@ class PushNotificationService {
   static Future<void> _saveTokenToFirestore(String token) async {
     if (_currentUserId == null) return;
 
+    final platform = Platform.isIOS ? 'ios' : 'android';
+
     try {
       await _firestore
           .collection('users')
@@ -95,12 +105,12 @@ class PushNotificationService {
           .doc(token)
           .set({
         'token': token,
-        'platform': 'ios',
+        'platform': platform,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      debugPrint('FCM token saved for iOS');
+      debugPrint('FCM token saved for $platform');
     } catch (e) {
       debugPrint('Error saving FCM token: $e');
     }
@@ -121,8 +131,9 @@ class PushNotificationService {
 
   /// Remove FCM token on logout
   static Future<void> removeToken() async {
-    // Skip on web and non-iOS platforms
-    if (kIsWeb || !Platform.isIOS) return;
+    // Skip on web and unsupported platforms
+    if (kIsWeb) return;
+    if (!Platform.isIOS && !Platform.isAndroid) return;
 
     final userIdToRemove = _currentUserId;
     if (userIdToRemove == null) {
