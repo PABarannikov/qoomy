@@ -16,6 +16,9 @@ class BadgeService {
   static Function()? _onAppBackground;
 
   static void init() {
+    // Skip on web - native platform channels don't exist
+    if (kIsWeb) return;
+
     // Listen for requests from native platform
     platform.setMethodCallHandler((call) async {
       if (call.method == 'refreshBadge') {
@@ -37,6 +40,9 @@ class BadgeService {
   }
 
   static Future<void> setBadgeCount(int count, {bool forceUpdate = false}) async {
+    // Skip on web - badges are only for mobile
+    if (kIsWeb) return;
+
     // Only update if count actually changed (unless forceUpdate is true for debugging)
     if (!forceUpdate && count == _lastBadgeCount) return;
     _lastBadgeCount = count;
@@ -49,6 +55,9 @@ class BadgeService {
   }
 
   static Future<void> resetBadge() async {
+    // Skip on web - badges are only for mobile
+    if (kIsWeb) return;
+
     _lastBadgeCount = 0;
     try {
       await platform.invokeMethod('resetBadge');
@@ -108,23 +117,29 @@ final badgeSyncProvider = StreamProvider.family<int, String>((ref, userId) {
   // Listen to the totalUnreadCountProvider for real-time updates
   ref.listen<AsyncValue<int>>(totalUnreadCountProvider(userId), (previous, next) {
     next.whenData((count) {
-      final timestamp = timeFormat.format(DateTime.now());
-      print('🔔 Real-time update at $timestamp. Total unread count: $count');
+      if (!kIsWeb) {
+        final timestamp = timeFormat.format(DateTime.now());
+        print('🔔 Real-time update at $timestamp. Total unread count: $count');
+      }
       BadgeService.setBadgeCount(count);
       controller.add(count);
     });
   });
 
-  // Also refresh every 5 seconds by directly querying Firestore
-  periodicTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-    refreshFromFirestore();
-  });
+  // Also refresh every 5 seconds by directly querying Firestore (mobile only)
+  if (!kIsWeb) {
+    periodicTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      refreshFromFirestore();
+    });
+  }
 
   // Initial update from provider
   final totalUnreadAsync = ref.read(totalUnreadCountProvider(userId));
   totalUnreadAsync.whenData((count) {
-    final timestamp = timeFormat.format(DateTime.now());
-    print('🔔 Initial check at $timestamp. Total unread count: $count');
+    if (!kIsWeb) {
+      final timestamp = timeFormat.format(DateTime.now());
+      print('🔔 Initial check at $timestamp. Total unread count: $count');
+    }
     BadgeService.setBadgeCount(count);
     controller.add(count);
   });
