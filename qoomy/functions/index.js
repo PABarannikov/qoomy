@@ -1,4 +1,4 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
@@ -81,12 +81,11 @@ exports.onNewChatMessage = onDocumentCreated(
 
     for (const userId of recipientIds) {
       try {
-        // Get user's FCM tokens from subcollection (iOS only)
+        // Get user's FCM tokens from subcollection (iOS and Android)
         const tokensSnapshot = await db
           .collection("users")
           .doc(userId)
           .collection("fcmTokens")
-          .where("platform", "==", "ios")
           .get();
 
         // Also check legacy fcmToken field directly on user document
@@ -104,10 +103,14 @@ exports.onNewChatMessage = onDocumentCreated(
         // Collect tokens from both sources
         const tokens = new Set();
 
-        // Add tokens from subcollection
+        // Add tokens from subcollection with platform info
+        const tokenPlatforms = new Map();
         for (const tokenDoc of tokensSnapshot.docs) {
-          const token = tokenDoc.data().token;
-          if (token) tokens.add(token);
+          const data = tokenDoc.data();
+          if (data.token) {
+            tokens.add(data.token);
+            tokenPlatforms.set(data.token, data.platform || "unknown");
+          }
         }
 
         // Add legacy token if exists
@@ -122,6 +125,7 @@ exports.onNewChatMessage = onDocumentCreated(
             token,
             userId,
             unreadCount,
+            platform: tokenPlatforms.get(token) || "ios",
           });
         }
       } catch (error) {
@@ -130,7 +134,7 @@ exports.onNewChatMessage = onDocumentCreated(
     }
 
     // Send all notifications
-    const sendPromises = notifications.map(async ({ token, userId, unreadCount }) => {
+    const sendPromises = notifications.map(async ({ token, userId, unreadCount, platform }) => {
       try {
         const payload = {
           token,
@@ -138,7 +142,27 @@ exports.onNewChatMessage = onDocumentCreated(
             title: senderName,
             body: messageText.length > 100 ? messageText.substring(0, 100) + "..." : messageText,
           },
-          apns: {
+          data: {
+            roomCode,
+            type: "chat_message",
+          },
+        };
+
+        // Add platform-specific config
+        if (platform === "android") {
+          // Android: show message with unread count, use tag to replace previous notification
+          const messagePreview = messageText.length > 50 ? messageText.substring(0, 50) + "..." : messageText;
+          payload.notification.body = `${messagePreview} (+${unreadCount} unread)`;
+          payload.android = {
+            notification: {
+              channelId: "qoomy_messages",
+              tag: "qoomy_badge", // Same tag as badge notification - will replace it
+              notificationCount: unreadCount,
+            },
+          };
+        } else {
+          // iOS: use badge in aps payload
+          payload.apns = {
             payload: {
               aps: {
                 badge: unreadCount,
@@ -146,15 +170,11 @@ exports.onNewChatMessage = onDocumentCreated(
                 "content-available": 1,
               },
             },
-          },
-          data: {
-            roomCode,
-            type: "chat_message",
-          },
-        };
+          };
+        }
 
         await messaging.send(payload);
-        console.log(`Notification sent to user ${userId}`);
+        console.log(`Notification sent to user ${userId} (${platform})`);
       } catch (error) {
         console.error(`Error sending to token:`, error.message);
         // If token is invalid, remove it
@@ -172,6 +192,163 @@ exports.onNewChatMessage = onDocumentCreated(
     return null;
   }
 );
+
+/**
+ * Triggered when a user's roomReads document is updated (user read messages).
+ * Sends a silent notification to update the badge count on the device.
+ */
+exports.onRoomRead = onDocumentWritten(
+  "users/{userId}/roomReads/{roomId}",
+  async (event) => {
+    const userId = event.params.userId;
+    const roomId = event.params.roomId;
+
+    console.log(`Room read updated for user ${userId} in room ${roomId}`);
+
+    // Calculate new total unread count
+    const unreadCount = await calculateTotalUnreadCount(userId);
+    console.log(`New unread count for user ${userId}: ${unreadCount}`);
+
+    // Get user's FCM tokens
+    const tokensSnapshot = await db
+      .collection("users")
+      .doc(userId)
+      .collection("fcmTokens")
+      .get();
+
+    if (tokensSnapshot.empty) {
+      console.log(`No FCM tokens for user ${userId}`);
+      return null;
+    }
+
+    // Send silent notification to update badge
+    const sendPromises = tokensSnapshot.docs.map(async (tokenDoc) => {
+      const data = tokenDoc.data();
+      const token = data.token;
+      const platform = data.platform || "ios";
+
+      if (!token) return;
+
+      try {
+        const payload = {
+          token,
+          data: {
+            type: "badge_update",
+            unreadCount: String(unreadCount),
+          },
+        };
+
+        if (platform === "android") {
+          // Android: send data-only message to clear notifications and update badge
+          payload.android = {
+            priority: "high",
+          };
+        } else {
+          // iOS: update badge silently
+          payload.apns = {
+            payload: {
+              aps: {
+                badge: unreadCount,
+                "content-available": 1,
+              },
+            },
+          };
+        }
+
+        await messaging.send(payload);
+        console.log(`Badge update sent to user ${userId} (${platform}): ${unreadCount}`);
+      } catch (error) {
+        console.error(`Error sending badge update:`, error.message);
+        if (
+          error.code === "messaging/invalid-registration-token" ||
+          error.code === "messaging/registration-token-not-registered"
+        ) {
+          await removeInvalidToken(token);
+        }
+      }
+    });
+
+    await Promise.all(sendPromises);
+    return null;
+  }
+);
+
+/**
+ * Called when app goes to background on Android.
+ * Clears FCM notifications and sends a summary notification with unread count.
+ */
+exports.onAppBackground = onCall(async (request) => {
+  const userId = request.auth?.uid;
+  if (!userId) {
+    throw new HttpsError("unauthenticated", "User must be authenticated");
+  }
+
+  console.log(`App went to background for user ${userId}`);
+
+  // Calculate total unread count
+  const unreadCount = await calculateTotalUnreadCount(userId);
+  console.log(`Unread count for user ${userId}: ${unreadCount}`);
+
+  if (unreadCount === 0) {
+    // No unread messages, no notification needed
+    return { success: true, unreadCount: 0 };
+  }
+
+  // Get user's Android FCM tokens
+  const tokensSnapshot = await db
+    .collection("users")
+    .doc(userId)
+    .collection("fcmTokens")
+    .where("platform", "==", "android")
+    .get();
+
+  if (tokensSnapshot.empty) {
+    console.log(`No Android FCM tokens for user ${userId}`);
+    return { success: true, unreadCount };
+  }
+
+  // Send summary notification to Android devices
+  const sendPromises = tokensSnapshot.docs.map(async (tokenDoc) => {
+    const token = tokenDoc.data().token;
+    if (!token) return;
+
+    try {
+      const payload = {
+        token,
+        notification: {
+          title: "Qoomy",
+          body: `${unreadCount} unread message${unreadCount > 1 ? "s" : ""}`,
+        },
+        android: {
+          notification: {
+            channelId: "qoomy_messages",
+            tag: "qoomy_badge", // Same tag as chat notifications - will replace them
+            notificationCount: unreadCount,
+          },
+          priority: "high",
+        },
+        data: {
+          type: "background_summary",
+          unreadCount: String(unreadCount),
+        },
+      };
+
+      await messaging.send(payload);
+      console.log(`Summary notification sent to user ${userId}: ${unreadCount} unread`);
+    } catch (error) {
+      console.error(`Error sending summary notification:`, error.message);
+      if (
+        error.code === "messaging/invalid-registration-token" ||
+        error.code === "messaging/registration-token-not-registered"
+      ) {
+        await removeInvalidToken(token);
+      }
+    }
+  });
+
+  await Promise.all(sendPromises);
+  return { success: true, unreadCount };
+});
 
 /**
  * Calculate total unread message count for a user across ALL their rooms.

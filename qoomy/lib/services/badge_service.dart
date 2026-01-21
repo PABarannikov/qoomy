@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -10,15 +13,23 @@ class BadgeService {
   static const platform = MethodChannel('com.qoomy.qoomy/badge');
   static int _lastBadgeCount = -1;
   static Function()? _onRefreshRequested;
+  static Function()? _onAppBackground;
 
   static void init() {
-    // Listen for refresh requests from native iOS
+    // Listen for requests from native platform
     platform.setMethodCallHandler((call) async {
       if (call.method == 'refreshBadge') {
         print('🔔 Native platform requested badge refresh');
         _onRefreshRequested?.call();
+      } else if (call.method == 'onAppBackground') {
+        print('🔔 App went to background - triggering server notification');
+        _onAppBackground?.call();
       }
     });
+  }
+
+  static void setOnAppBackgroundCallback(Function() callback) {
+    _onAppBackground = callback;
   }
 
   static void setRefreshCallback(Function() callback) {
@@ -80,6 +91,20 @@ final badgeSyncProvider = StreamProvider.family<int, String>((ref, userId) {
     refreshFromFirestore();
   });
 
+  // Register callback for when app goes to background (Android)
+  // This triggers the server to send a summary FCM notification
+  BadgeService.setOnAppBackgroundCallback(() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+
+    try {
+      final functions = FirebaseFunctions.instance;
+      await functions.httpsCallable('onAppBackground').call();
+      print('🔔 Called onAppBackground Cloud Function');
+    } catch (e) {
+      print('🔔 Error calling onAppBackground: $e');
+    }
+  });
+
   // Listen to the totalUnreadCountProvider for real-time updates
   ref.listen<AsyncValue<int>>(totalUnreadCountProvider(userId), (previous, next) {
     next.whenData((count) {
@@ -107,6 +132,7 @@ final badgeSyncProvider = StreamProvider.family<int, String>((ref, userId) {
   ref.onDispose(() {
     periodicTimer?.cancel();
     BadgeService.setRefreshCallback(() {}); // Clear callback
+    BadgeService.setOnAppBackgroundCallback(() {}); // Clear callback
     controller.close();
   });
 
