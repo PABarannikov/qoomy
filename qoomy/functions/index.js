@@ -150,15 +150,21 @@ exports.onNewChatMessage = onDocumentCreated(
 
         // Add platform-specific config
         if (platform === "android") {
-          // Android: show message with unread count, use tag to replace previous notification
+          // Android: use "Qoomy" as title so it matches summary notification (same tag will replace)
           const messagePreview = messageText.length > 50 ? messageText.substring(0, 50) + "..." : messageText;
-          payload.notification.body = `${messagePreview} (+${unreadCount} unread)`;
+          payload.notification.title = "Qoomy";
+          // unreadCount includes this message, so show +N only if there are other unread messages
+          const otherUnread = unreadCount - 1;
+          payload.notification.body = otherUnread > 0
+            ? `${senderName}: ${messagePreview} (+${otherUnread} more)`
+            : `${senderName}: ${messagePreview}`;
           payload.android = {
             notification: {
               channelId: "qoomy_messages",
               tag: "qoomy_badge", // Same tag as badge notification - will replace it
               notificationCount: unreadCount,
             },
+            priority: "high",
           };
         } else {
           // iOS: use badge in aps payload
