@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qoomy/providers/auth_provider.dart';
 import 'package:qoomy/providers/team_provider.dart';
+import 'package:qoomy/providers/room_provider.dart';
 import 'package:qoomy/screens/auth/login_screen.dart';
 import 'package:qoomy/screens/auth/register_screen.dart';
 import 'package:qoomy/screens/home/home_screen.dart';
@@ -17,17 +18,25 @@ import 'package:qoomy/screens/team/team_details_screen.dart';
 import 'package:qoomy/screens/team/join_team_screen.dart';
 import 'package:qoomy/screens/admin/admin_screen.dart';
 import 'package:qoomy/screens/profile/profile_screen.dart';
+import 'package:qoomy/screens/welcome/welcome_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
+  final user = authState.valueOrNull;
+
+  // Watch teams for logged in user to detect new users
+  final userTeams = user != null
+      ? ref.watch(userTeamsProvider(user.uid))
+      : const AsyncValue<List<dynamic>>.data([]);
 
   return GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
-      final isLoggedIn = authState.valueOrNull != null;
+      final isLoggedIn = user != null;
       final isAuthRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
       final isJoinTeamRoute = state.matchedLocation.startsWith('/join-team/');
+      final isWelcomeRoute = state.matchedLocation == '/welcome';
 
       // If user is not logged in and trying to join a team via deep link,
       // store the invite code and redirect to login
@@ -49,7 +58,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (pendingInvite != null) {
           return '/join-team/$pendingInvite';
         }
+        // Check if user has teams - if not, show welcome screen
+        final teams = userTeams.valueOrNull ?? [];
+        if (teams.isEmpty) {
+          return '/welcome';
+        }
         return '/';
+      }
+
+      // If logged in, going to home, and has no teams - show welcome
+      // But not if user has already skipped welcome screen
+      if (isLoggedIn && state.matchedLocation == '/' && !isWelcomeRoute) {
+        final welcomeSkipped = ref.read(welcomeSkippedProvider);
+        if (!welcomeSkipped) {
+          final teams = userTeams.valueOrNull;
+          // Only redirect if we have loaded teams data and it's empty
+          if (teams != null && teams.isEmpty) {
+            return '/welcome';
+          }
+        }
       }
 
       return null;
@@ -58,6 +85,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/welcome',
+        builder: (context, state) => const WelcomeScreen(),
       ),
       GoRoute(
         path: '/login',

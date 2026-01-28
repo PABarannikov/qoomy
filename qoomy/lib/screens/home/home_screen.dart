@@ -114,12 +114,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onTap: () => setState(() => _roleFilter = RoleFilter.host),
               ),
               const SizedBox(width: 8),
-              _buildIconFilterChip(
-                icon: Icons.person,
-                tooltip: l10n.asPlayer,
-                isSelected: _roleFilter == RoleFilter.player,
-                onTap: () => setState(() => _roleFilter = RoleFilter.player),
-              ),
+              _buildPlayerFilterChip(l10n, userId),
               const SizedBox(width: 12),
               Container(width: 1, height: 28, color: dividerColor),
               const SizedBox(width: 12),
@@ -205,6 +200,80 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             size: 20,
             color: isSelected ? Colors.white : Colors.grey.shade600,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlayerFilterChip(AppLocalizations l10n, String? userId) {
+    final isSelected = _roleFilter == RoleFilter.player;
+
+    return Tooltip(
+      message: l10n.asPlayer,
+      child: GestureDetector(
+        onTap: () => setState(() => _roleFilter = RoleFilter.player),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? QoomyTheme.primaryColor : Colors.grey.shade300,
+                ),
+              ),
+              child: Icon(
+                Icons.person,
+                size: 20,
+                color: isSelected ? Colors.white : Colors.grey.shade600,
+              ),
+            ),
+            // Badge with new questions count
+            if (userId != null)
+              Consumer(
+                builder: (context, ref, child) {
+                  final unseenCountAsync = ref.watch(unseenPlayerRoomsCountProvider(userId));
+                  return unseenCountAsync.when(
+                    data: (count) {
+                      debugPrint('Unseen player rooms count: $count');
+                      if (count == 0) return const SizedBox.shrink();
+                      return Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          child: Text(
+                            count > 99 ? '99+' : count.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (e, __) {
+                      debugPrint('Unseen count error: $e');
+                      return const SizedBox.shrink();
+                    },
+                  );
+                },
+              ),
+          ],
         ),
       ),
     );
@@ -408,6 +477,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final l10n = AppLocalizations.of(context);
     final unreadCountAsync = ref.watch(unreadCountProvider((roomCode: room.code, userId: userId)));
     final hasCorrectAnswerAsync = ref.watch(hasCorrectAnswerProvider(room.code));
+    final hasOpenedAsync = ref.watch(hasOpenedRoomProvider((roomCode: room.code, userId: userId)));
+    final isNew = !(hasOpenedAsync.valueOrNull ?? true);
 
     // Determine status color and text based on room status and correct answer
     Color statusColor;
@@ -448,6 +519,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      shape: isNew
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.red, width: 2),
+            )
+          : null,
       child: InkWell(
         onTap: () => _navigateToRoom(context, room, isHost, userId),
         borderRadius: BorderRadius.circular(12),
@@ -479,6 +556,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ),
                   ),
+                  // NEW badge for unopened rooms
+                  if (isNew)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        l10n.newBadge,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   // Status badge
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

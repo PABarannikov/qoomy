@@ -110,13 +110,20 @@ class RoomService {
           .collection('members')
           .get();
 
+      print('[RoomService] Auto-join: team=$teamId, members=${membersSnapshot.docs.length}, hostId=$hostId');
+
       final batch = _firestore.batch();
+      int addedCount = 0;
 
       for (final memberDoc in membersSnapshot.docs) {
         final member = TeamMember.fromFirestore(memberDoc);
+        print('[RoomService] Member: ${member.id} (${member.name})');
 
         // Skip the host - they created the room, not a player
-        if (member.id == hostId) continue;
+        if (member.id == hostId) {
+          print('[RoomService] Skipping host');
+          continue;
+        }
 
         final player = Player(
           id: member.id,
@@ -128,11 +135,13 @@ class RoomService {
           _roomsCollection.doc(roomCode).collection('players').doc(member.id),
           player.toFirestore(),
         );
+        addedCount++;
       }
 
       await batch.commit();
+      print('[RoomService] Auto-join complete: added $addedCount players to room $roomCode');
     } catch (e) {
-      developer.log('Error auto-joining team members: $e', name: 'RoomService');
+      print('[RoomService] Error auto-joining team members: $e');
     }
   }
 
@@ -423,6 +432,17 @@ class RoomService {
     final data = doc.data();
     if (data == null) return null;
     return (data['lastReadAt'] as Timestamp?)?.toDate();
+  }
+
+  /// Stream to check if user has opened a room (has entry in roomReads)
+  Stream<bool> hasOpenedRoomStream(String roomCode, String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('roomReads')
+        .doc(roomCode)
+        .snapshots()
+        .map((doc) => doc.exists);
   }
 
   /// Stream of unread message count for a specific room and user
@@ -760,5 +780,119 @@ class RoomService {
       developer.log('Error getting total unread count: $e', name: 'RoomService');
       return 0;
     }
+  }
+
+  /// Stream of count of rooms where user is a player but hasn't opened yet
+  /// A room is "new" if user has no roomReads document for it
+  /// Also includes team rooms where user is not the host
+  Stream<int> unseenPlayerRoomsCountStream(String userId, List<String> teamIds) {
+    // Listen to rooms where user is a player
+    final playerRoomsStream = _firestore
+        .collectionGroup('players')
+        .where('id', isEqualTo: userId)
+        .snapshots();
+
+    // Listen to user's roomReads collection
+    final roomReadsStream = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('roomReads')
+        .snapshots();
+
+    final controller = StreamController<int>.broadcast();
+
+    Set<String>? playerRoomCodes;
+    Set<String>? teamRoomCodes;
+    Set<String>? readRoomCodes;
+    StreamSubscription? teamRoomsSub;
+
+    void recalculate() {
+      if (playerRoomCodes == null || readRoomCodes == null) return;
+      // If user has teams, wait for teamRoomCodes to be set
+      if (teamIds.isNotEmpty && teamRoomCodes == null) return;
+
+      // Combine player rooms and team rooms (where user is not host)
+      final allAccessibleRooms = <String>{
+        ...playerRoomCodes!,
+        ...?teamRoomCodes,
+      };
+
+      // Count rooms that are accessible but not in readRoomCodes
+      final unseenCount = allAccessibleRooms
+          .where((code) => !readRoomCodes!.contains(code))
+          .length;
+
+      print('[RoomService] Unseen rooms: $unseenCount (player: ${playerRoomCodes!.length}, team: ${teamRoomCodes?.length ?? 0}, read: ${readRoomCodes!.length})');
+      controller.add(unseenCount);
+    }
+
+    final playerSub = playerRoomsStream.listen(
+      (snapshot) {
+        playerRoomCodes = <String>{};
+        for (final doc in snapshot.docs) {
+          // Extract room code from path: rooms/{roomCode}/players/{playerId}
+          final pathParts = doc.reference.path.split('/');
+          if (pathParts.length >= 2) {
+            playerRoomCodes!.add(pathParts[1]);
+          }
+        }
+        print('[RoomService] Player rooms: ${playerRoomCodes!.toList()}');
+        recalculate();
+      },
+      onError: (e) {
+        print('[RoomService] Error in playerRoomsStream: $e');
+        controller.addError(e);
+      },
+    );
+
+    // Listen to team rooms if user has teams
+    if (teamIds.isNotEmpty) {
+      // Firestore limits whereIn to 30 items
+      final teamIdsToQuery = teamIds.take(30).toList();
+      teamRoomsSub = _roomsCollection
+          .where('teamId', whereIn: teamIdsToQuery)
+          .snapshots()
+          .listen(
+        (snapshot) {
+          teamRoomCodes = <String>{};
+          for (final doc in snapshot.docs) {
+            final room = RoomModel.fromFirestore(doc, []);
+            // Only include rooms where user is NOT the host
+            if (room.hostId != userId) {
+              teamRoomCodes!.add(room.code);
+            }
+          }
+          print('[RoomService] Team rooms (not host): ${teamRoomCodes!.toList()}');
+          recalculate();
+        },
+        onError: (e) {
+          print('[RoomService] Error in teamRoomsStream: $e');
+          controller.addError(e);
+        },
+      );
+    } else {
+      teamRoomCodes = <String>{};
+    }
+
+    final readsSub = roomReadsStream.listen(
+      (snapshot) {
+        readRoomCodes = snapshot.docs.map((doc) => doc.id).toSet();
+        print('[RoomService] Read rooms: ${readRoomCodes!.toList()}');
+        recalculate();
+      },
+      onError: (e) {
+        print('[RoomService] Error in roomReadsStream: $e');
+        controller.addError(e);
+      },
+    );
+
+    controller.onCancel = () {
+      playerSub.cancel();
+      teamRoomsSub?.cancel();
+      readsSub.cancel();
+      controller.close();
+    };
+
+    return controller.stream;
   }
 }

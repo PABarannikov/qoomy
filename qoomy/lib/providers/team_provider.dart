@@ -7,6 +7,9 @@ final teamServiceProvider = Provider<TeamService>((ref) => TeamService());
 /// Stores a pending team invite code for users who need to register/login first
 final pendingTeamInviteProvider = StateProvider<String?>((ref) => null);
 
+/// Tracks if user has dismissed the welcome screen in this session
+final welcomeSkippedProvider = StateProvider<bool>((ref) => false);
+
 final teamProvider = StreamProvider.family<TeamModel?, String>((ref, teamId) {
   return ref.watch(teamServiceProvider).teamStream(teamId);
 });

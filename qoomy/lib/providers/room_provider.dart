@@ -83,6 +83,26 @@ final hasRevealedAnswerProvider = StreamProvider.family<bool, ({String roomCode,
   return ref.watch(roomServiceProvider).hasRevealedAnswerStream(params.roomCode, params.userId);
 });
 
+/// Provider to check if user has opened a room (has entry in roomReads)
+final hasOpenedRoomProvider = StreamProvider.family<bool, ({String roomCode, String userId})>((ref, params) {
+  return ref.watch(roomServiceProvider).hasOpenedRoomStream(params.roomCode, params.userId);
+});
+
+/// Provider for count of rooms where user is a player (or team member) but hasn't opened yet
+final unseenPlayerRoomsCountProvider = StreamProvider.family<int, String>((ref, userId) {
+  final userTeamsAsync = ref.watch(userTeamsProvider(userId));
+  final roomService = ref.watch(roomServiceProvider);
+
+  return userTeamsAsync.when(
+    data: (teams) {
+      final teamIds = teams.map((t) => t.id).toList();
+      return roomService.unseenPlayerRoomsCountStream(userId, teamIds);
+    },
+    loading: () => Stream.value(0),
+    error: (_, __) => roomService.unseenPlayerRoomsCountStream(userId, []),
+  );
+});
+
 /// Provider for rooms from user's teams (includes all rooms where teamId matches any of user's teams)
 final userTeamRoomsProvider = StreamProvider.family<List<RoomModel>, String>((ref, userId) {
   final userTeamsAsync = ref.watch(userTeamsProvider(userId));

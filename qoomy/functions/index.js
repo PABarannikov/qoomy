@@ -620,6 +620,8 @@ Player Answer: ${playerAnswer}
 Respond with JSON only in this format:
 {"isCorrect": true/false, "confidence": 0.0-1.0, "explanation": "brief reason"}
 
+IMPORTANT: Only evaluate whether the answer is factually/semantically correct. Do NOT penalize for format, language, or number of answers provided.
+
 Be lenient with:
 - Spelling variations
 - Synonyms
@@ -627,6 +629,9 @@ Be lenient with:
 - Abbreviations
 - Character aliases and alternative names (e.g., "Edmond Dantès" = "Count of Monte Cristo", birth name = title/known name)
 - The same person, character, or entity referred to by a different name (maiden name, pen name, stage name, nickname, title, etc.)
+- Answers in a different language that mean the same thing (e.g., "petri dish" = "чашка Петри", "War and Peace" = "Война и мир")
+- Transliterations between scripts (e.g., "билборд" = "billboard", "Москва" = "Moskva")
+- Different grammatical forms of the same word: plural/singular, cases, declensions, conjugations, tenses (e.g., "крылья" = "крыло", "крыльях" = "крыло", "dogs" = "dog")
 
 Be strict about:
 - Fundamentally wrong answers

@@ -187,6 +187,7 @@ class AppLocalizations {
       'playerQuestions': 'Questions I answered',
       'activeOnly': 'Active',
       'unreadOnly': 'Unread',
+      'newBadge': 'NEW',
 
       // Teams
       'teams': 'Teams',
@@ -245,6 +246,18 @@ class AppLocalizations {
       'totalPoints': 'Total Points',
       'notLoggedIn': 'Not logged in',
       'confirmLogout': 'Are you sure you want to log out?',
+
+      // Welcome screen
+      'welcomeTitle': 'Welcome to Qoomy!',
+      'welcomeDescription': 'Qoomy is an app for fun quizzes with friends. Here you can ask questions in a "What? Where? When?" style, discuss them in team chat and give answers. AI automatically checks if answers are correct, or you can evaluate them manually. Create a team, invite members with a code, and all team questions will be available to everyone. Join and play!',
+      'welcomeSubtitle': 'Get started by joining a team or answering a question',
+      'joinTeamDescription': 'Connect with friends and family',
+      'createTeamDescription': 'Start your own team',
+      'joinQuestion': 'Join Question',
+      'joinRoomDescription': 'Enter a room code to answer a question',
+      'askQuestion': 'Ask Question',
+      'askQuestionDescription': 'Create a new question for others',
+      'skipForNow': 'Skip for now',
     },
     'ru': {
       // App
@@ -420,6 +433,7 @@ class AppLocalizations {
       'playerQuestions': 'Чужие вопросы',
       'activeOnly': 'Активные',
       'unreadOnly': 'Непрочитанные',
+      'newBadge': 'НОВОЕ',
 
       // Teams
       'teams': 'Команды',
@@ -478,6 +492,18 @@ class AppLocalizations {
       'totalPoints': 'Всего очков',
       'notLoggedIn': 'Не авторизован',
       'confirmLogout': 'Вы уверены, что хотите выйти?',
+
+      // Welcome screen
+      'welcomeTitle': 'Добро пожаловать в Qoomy!',
+      'welcomeDescription': 'Qoomy — это приложение для весёлых викторин с друзьями. Здесь вы можете задавать вопросы в стиле "Что? Где? Когда?", обсуждать их в чате с командой и давать ответы. Искусственный интеллект автоматически проверяет правильность ответов, или вы можете оценивать их вручную. Создайте команду, пригласите участников по коду, и все вопросы команды будут доступны каждому. Присоединяйтесь и играйте!',
+      'welcomeSubtitle': 'Присоединитесь к команде или ответьте на вопрос',
+      'joinTeamDescription': 'Играйте с друзьями и семьёй',
+      'createTeamDescription': 'Создайте свою команду',
+      'joinQuestion': 'Присоединиться к вопросу',
+      'joinRoomDescription': 'Введите код комнаты для ответа на вопрос',
+      'askQuestion': 'Задать вопрос',
+      'askQuestionDescription': 'Создайте новый вопрос для других',
+      'skipForNow': 'Пропустить',
     },
   };
 
@@ -685,6 +711,17 @@ class AppLocalizations {
   String get playerQuestions => get('playerQuestions');
   String get activeOnly => get('activeOnly');
   String get unreadOnly => get('unreadOnly');
+  String get newBadge => get('newBadge');
+  String get welcomeTitle => get('welcomeTitle');
+  String get welcomeDescription => get('welcomeDescription');
+  String get welcomeSubtitle => get('welcomeSubtitle');
+  String get joinTeamDescription => get('joinTeamDescription');
+  String get createTeamDescription => get('createTeamDescription');
+  String get joinQuestion => get('joinQuestion');
+  String get joinRoomDescription => get('joinRoomDescription');
+  String get askQuestion => get('askQuestion');
+  String get askQuestionDescription => get('askQuestionDescription');
+  String get skipForNow => get('skipForNow');
 
   /// Returns the correct plural form for "members" based on the count
   /// Russian has 3 plural forms: 1 участник, 2-4 участника, 5+ участников
