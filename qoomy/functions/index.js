@@ -32,9 +32,13 @@ exports.onNewChatMessage = onDocumentCreated(
     const roomCode = event.params.roomCode;
     const senderId = message.playerId;
     const senderName = message.playerName || "Someone";
-    const messageText = message.text || "";
+    const messageType = message.type || "chat";
 
-    console.log(`New message in room ${roomCode} from ${senderName}`);
+    // Hide actual answer content in notifications - show "Ответ дан" instead
+    const isAnswer = messageType === "answer";
+    const messageText = isAnswer ? "Ответ дан" : (message.text || "");
+
+    console.log(`New message in room ${roomCode} from ${senderName} (type: ${messageType})`);
 
     // Get room info
     const roomDoc = await db.collection("rooms").doc(roomCode).get();

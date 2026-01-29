@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qoomy/services/room_service.dart';
 import 'package:qoomy/services/ai_service.dart';
@@ -8,6 +9,73 @@ import 'package:qoomy/providers/team_provider.dart';
 
 final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
 final aiServiceProvider = Provider<AiService>((ref) => AiService());
+
+/// Pagination state for home screen rooms list
+class RoomPaginationState {
+  final int limit;
+  final bool hasMore;
+  final bool isLoadingMore;
+
+  const RoomPaginationState({
+    this.limit = 25,
+    this.hasMore = true,
+    this.isLoadingMore = false,
+  });
+
+  RoomPaginationState copyWith({
+    int? limit,
+    bool? hasMore,
+    bool? isLoadingMore,
+  }) {
+    return RoomPaginationState(
+      limit: limit ?? this.limit,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
+}
+
+/// Notifier to manage room pagination
+class RoomPaginationNotifier extends StateNotifier<RoomPaginationState> {
+  static const int _pageSize = 25;
+
+  RoomPaginationNotifier() : super(const RoomPaginationState());
+
+  void loadMore() {
+    if (!state.hasMore || state.isLoadingMore) return;
+
+    final newLimit = state.limit + _pageSize;
+    print('[Pagination] Loading more: ${state.limit} -> $newLimit');
+
+    state = state.copyWith(
+      isLoadingMore: true,
+      limit: newLimit,
+    );
+
+    // Reset loading state after a short delay
+    // The actual data loading happens through the providers
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        state = state.copyWith(isLoadingMore: false);
+      }
+    });
+  }
+
+  void setHasMore(bool hasMore) {
+    if (state.hasMore != hasMore) {
+      state = state.copyWith(hasMore: hasMore);
+    }
+  }
+
+  void reset() {
+    state = const RoomPaginationState();
+  }
+}
+
+final roomPaginationProvider =
+    StateNotifierProvider<RoomPaginationNotifier, RoomPaginationState>((ref) {
+  return RoomPaginationNotifier();
+});
 
 final roomProvider = StreamProvider.family<RoomModel?, String>((ref, roomCode) {
   return ref.watch(roomServiceProvider).roomStream(roomCode);
@@ -21,14 +89,14 @@ final chatProvider = StreamProvider.family<List<ChatMessage>, String>((ref, room
   return ref.watch(roomServiceProvider).chatStream(roomCode);
 });
 
-/// Provider for rooms hosted by a user
-final userHostedRoomsProvider = StreamProvider.family<List<RoomModel>, String>((ref, userId) {
-  return ref.watch(roomServiceProvider).userHostedRoomsStream(userId);
+/// Provider for rooms hosted by a user (with optional limit for pagination)
+final userHostedRoomsProvider = StreamProvider.family<List<RoomModel>, ({String userId, int? limit})>((ref, params) {
+  return ref.watch(roomServiceProvider).userHostedRoomsStream(params.userId, limit: params.limit);
 });
 
-/// Provider for rooms joined by a user (as player)
-final userJoinedRoomsProvider = StreamProvider.family<List<RoomModel>, String>((ref, userId) {
-  return ref.watch(roomServiceProvider).userJoinedRoomsStream(userId);
+/// Provider for rooms joined by a user (as player, with optional limit for pagination)
+final userJoinedRoomsProvider = StreamProvider.family<List<RoomModel>, ({String userId, int? limit})>((ref, params) {
+  return ref.watch(roomServiceProvider).userJoinedRoomsStream(params.userId, limit: params.limit);
 });
 
 /// Provider for unread message count of a specific room
@@ -37,10 +105,11 @@ final unreadCountProvider = StreamProvider.family<int, ({String roomCode, String
 });
 
 /// Provider for total unread message count across all user's rooms (hosted, joined, AND team rooms)
+/// Note: Uses no limit to count ALL rooms for badge accuracy
 final totalUnreadCountProvider = StreamProvider.family<int, String>((ref, userId) {
-  final hostedRoomsAsync = ref.watch(userHostedRoomsProvider(userId));
-  final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider(userId));
-  final teamRoomsAsync = ref.watch(userTeamRoomsProvider(userId));
+  final hostedRoomsAsync = ref.watch(userHostedRoomsProvider((userId: userId, limit: null)));
+  final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider((userId: userId, limit: null)));
+  final teamRoomsAsync = ref.watch(userTeamRoomsProvider((userId: userId, limit: null)));
   final roomService = ref.watch(roomServiceProvider);
 
   // Use valueOrNull to get available data immediately, even during loading
@@ -104,8 +173,8 @@ final unseenPlayerRoomsCountProvider = StreamProvider.family<int, String>((ref, 
 });
 
 /// Provider for rooms from user's teams (includes all rooms where teamId matches any of user's teams)
-final userTeamRoomsProvider = StreamProvider.family<List<RoomModel>, String>((ref, userId) {
-  final userTeamsAsync = ref.watch(userTeamsProvider(userId));
+final userTeamRoomsProvider = StreamProvider.family<List<RoomModel>, ({String userId, int? limit})>((ref, params) {
+  final userTeamsAsync = ref.watch(userTeamsProvider(params.userId));
 
   return userTeamsAsync.when(
     data: (teams) {
@@ -113,7 +182,7 @@ final userTeamRoomsProvider = StreamProvider.family<List<RoomModel>, String>((re
         return Stream.value([]);
       }
       final teamIds = teams.map((t) => t.id).toList();
-      return ref.watch(roomServiceProvider).userTeamRoomsStream(teamIds);
+      return ref.watch(roomServiceProvider).userTeamRoomsStream(teamIds, limit: params.limit);
     },
     loading: () => Stream.value([]),
     error: (_, __) => Stream.value([]),

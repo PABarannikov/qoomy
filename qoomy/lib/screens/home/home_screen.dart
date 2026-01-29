@@ -25,6 +25,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   UnreadFilter _unreadFilter = UnreadFilter.all;
   bool _hasRetried = false;
   String? _lastErrorUserId;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Load more when user scrolls near the bottom (200 pixels from end)
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      ref.read(roomPaginationProvider.notifier).loadMore();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -236,40 +258,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Consumer(
                 builder: (context, ref, child) {
                   final unseenCountAsync = ref.watch(unseenPlayerRoomsCountProvider(userId));
-                  return unseenCountAsync.when(
-                    data: (count) {
-                      debugPrint('Unseen player rooms count: $count');
-                      if (count == 0) return const SizedBox.shrink();
-                      return Positioned(
-                        right: -4,
-                        top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 18,
-                            minHeight: 18,
-                          ),
-                          child: Text(
-                            count > 99 ? '99+' : count.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                  final count = unseenCountAsync.valueOrNull ?? 0;
+                  return Positioned(
+                    right: -4,
+                    top: -4,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: count == 0
+                          ? const SizedBox.shrink()
+                          : Container(
+                              key: ValueKey(count),
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 18,
+                                minHeight: 18,
+                              ),
+                              child: Text(
+                                count > 99 ? '99+' : count.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (e, __) {
-                      debugPrint('Unseen count error: $e');
-                      return const SizedBox.shrink();
-                    },
+                    ),
                   );
                 },
               ),
@@ -310,36 +328,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Consumer(
                 builder: (context, ref, child) {
                   final unreadCountAsync = ref.watch(totalUnreadCountProvider(userId));
-                  return unreadCountAsync.when(
-                    data: (count) {
-                      if (count == 0) return const SizedBox.shrink();
-                      return Positioned(
-                        right: -4,
-                        top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 18,
-                            minHeight: 18,
-                          ),
-                          child: Text(
-                            count > 99 ? '99+' : count.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                  final count = unreadCountAsync.valueOrNull ?? 0;
+                  return Positioned(
+                    right: -4,
+                    top: -4,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: count == 0
+                          ? const SizedBox.shrink()
+                          : Container(
+                              key: ValueKey(count),
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 18,
+                                minHeight: 18,
+                              ),
+                              child: Text(
+                                count > 99 ? '99+' : count.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
+                    ),
                   );
                 },
               ),
@@ -360,9 +378,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _lastErrorUserId = userId;
         Future.delayed(const Duration(milliseconds: 800), () {
           if (mounted) {
-            ref.invalidate(userHostedRoomsProvider(userId));
-            ref.invalidate(userJoinedRoomsProvider(userId));
-            ref.invalidate(userTeamRoomsProvider(userId));
+            final limit = ref.read(roomPaginationProvider).limit;
+            ref.invalidate(userHostedRoomsProvider((userId: userId, limit: limit)));
+            ref.invalidate(userJoinedRoomsProvider((userId: userId, limit: limit)));
+            ref.invalidate(userTeamRoomsProvider((userId: userId, limit: limit)));
             Future.delayed(const Duration(milliseconds: 100), () {
               if (mounted) {
                 _hasRetried = false;
@@ -377,14 +396,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildRoomsList(BuildContext context, WidgetRef ref, String userId) {
-    final hostedRoomsAsync = ref.watch(userHostedRoomsProvider(userId));
-    final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider(userId));
-    final teamRoomsAsync = ref.watch(userTeamRoomsProvider(userId));
+    final paginationState = ref.watch(roomPaginationProvider);
+    final limit = paginationState.limit;
+
+    final hostedRoomsAsync = ref.watch(userHostedRoomsProvider((userId: userId, limit: limit)));
+    final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider((userId: userId, limit: limit)));
+    final teamRoomsAsync = ref.watch(userTeamRoomsProvider((userId: userId, limit: limit)));
 
     return hostedRoomsAsync.when(
       data: (hostedRooms) => joinedRoomsAsync.when(
         data: (joinedRooms) => teamRoomsAsync.when(
           data: (teamRooms) {
+            // Debug: raw data from providers
+            print('[Pagination] RAW DATA: hostedRooms=${hostedRooms.length}, joinedRooms=${joinedRooms.length}, teamRooms=${teamRooms.length}');
+
             // Create sets of room codes for deduplication
             final hostedCodes = hostedRooms.map((r) => r.code).toSet();
             final joinedCodes = joinedRooms.map((r) => r.code).toSet();
@@ -435,13 +460,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               return _buildEmptyState(context);
             }
 
+            // Check if there might be more rooms to load
+            // If total rooms from all sources equals the limit, there could be more
+            final totalLoaded = hostedRooms.length + playerRooms.length + uniqueTeamRooms.length;
+            final hasMore = totalLoaded >= limit;
+
+            // Debug logging (print shows in browser console, debugPrint only in terminal)
+            print('[Pagination] Loaded: hosted=${hostedRooms.length}, player=${playerRooms.length}, team=${uniqueTeamRooms.length}, total=$totalLoaded, limit=$limit, displayed=${allRooms.length}, hasMore=$hasMore');
+
+            // Update pagination state
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ref.read(roomPaginationProvider.notifier).setHasMore(hasMore);
+            });
+
             return RefreshIndicator(
               onRefresh: () async {
-                ref.invalidate(userHostedRoomsProvider(userId));
-                ref.invalidate(userJoinedRoomsProvider(userId));
-                ref.invalidate(userTeamRoomsProvider(userId));
+                ref.read(roomPaginationProvider.notifier).reset();
+                ref.invalidate(userHostedRoomsProvider((userId: userId, limit: limit)));
+                ref.invalidate(userJoinedRoomsProvider((userId: userId, limit: limit)));
+                ref.invalidate(userTeamRoomsProvider((userId: userId, limit: limit)));
               },
               child: ListView(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(16),
                 children: [
                   ...allRooms.map((entry) => _buildRoomCard(
@@ -451,6 +491,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     isHost: entry.value,
                     userId: userId,
                   )),
+                  // Show loading indicator when loading more
+                  if (paginationState.isLoadingMore || (hasMore && allRooms.isNotEmpty))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: paginationState.isLoadingMore
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Text(
+                                AppLocalizations.of(context).scrollForMore,
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 12,
+                                ),
+                              ),
+                      ),
+                    ),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -478,7 +538,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final unreadCountAsync = ref.watch(unreadCountProvider((roomCode: room.code, userId: userId)));
     final hasCorrectAnswerAsync = ref.watch(hasCorrectAnswerProvider(room.code));
     final hasOpenedAsync = ref.watch(hasOpenedRoomProvider((roomCode: room.code, userId: userId)));
-    final isNew = !(hasOpenedAsync.valueOrNull ?? true);
+    // Default to true (opened) during loading to prevent flashing
+    // NEW badge only shows once we confirm the user hasn't opened the room
+    // Hosts should NEVER see their own rooms as NEW
+    final isNew = !isHost && !(hasOpenedAsync.valueOrNull ?? true);
 
     // Determine status color and text based on room status and correct answer
     Color statusColor;
@@ -834,11 +897,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // Force refresh after returning from room
     if (mounted) {
+      final limit = ref.read(roomPaginationProvider).limit;
       ref.invalidate(unreadCountProvider((roomCode: room.code, userId: userId)));
       // Refresh room lists to update sorting by lastMessageAt
-      ref.invalidate(userHostedRoomsProvider(userId));
-      ref.invalidate(userJoinedRoomsProvider(userId));
-      ref.invalidate(userTeamRoomsProvider(userId));
+      ref.invalidate(userHostedRoomsProvider((userId: userId, limit: limit)));
+      ref.invalidate(userJoinedRoomsProvider((userId: userId, limit: limit)));
+      ref.invalidate(userTeamRoomsProvider((userId: userId, limit: limit)));
     }
   }
 

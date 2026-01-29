@@ -258,6 +258,7 @@ class AppLocalizations {
       'askQuestion': 'Ask Question',
       'askQuestionDescription': 'Create a new question for others',
       'skipForNow': 'Skip for now',
+      'scrollForMore': 'Scroll for more',
     },
     'ru': {
       // App
@@ -504,6 +505,7 @@ class AppLocalizations {
       'askQuestion': 'Задать вопрос',
       'askQuestionDescription': 'Создайте новый вопрос для других',
       'skipForNow': 'Пропустить',
+      'scrollForMore': 'Пролистайте для загрузки',
     },
   };
 
@@ -722,6 +724,7 @@ class AppLocalizations {
   String get askQuestion => get('askQuestion');
   String get askQuestionDescription => get('askQuestionDescription');
   String get skipForNow => get('skipForNow');
+  String get scrollForMore => get('scrollForMore');
 
   /// Returns the correct plural form for "members" based on the count
   /// Russian has 3 plural forms: 1 участник, 2-4 участника, 5+ участников

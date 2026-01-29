@@ -372,18 +372,22 @@ class RoomService {
   }
 
   /// Get all rooms created by a user (as host)
-  Stream<List<RoomModel>> userHostedRoomsStream(String userId) {
-    return _roomsCollection
+  Stream<List<RoomModel>> userHostedRoomsStream(String userId, {int? limit}) {
+    Query<Map<String, dynamic>> query = _roomsCollection
         .where('hostId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => RoomModel.fromFirestore(doc, []))
-            .toList());
+        .orderBy('createdAt', descending: true);
+
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+
+    return query.snapshots().map((snapshot) => snapshot.docs
+        .map((doc) => RoomModel.fromFirestore(doc, []))
+        .toList());
   }
 
   /// Get all rooms where user is a player
-  Stream<List<RoomModel>> userJoinedRoomsStream(String userId) {
+  Stream<List<RoomModel>> userJoinedRoomsStream(String userId, {int? limit}) {
     // Query collection group on 'id' field (stored in player document)
     return _firestore
         .collectionGroup('players')
@@ -403,6 +407,10 @@ class RoomService {
       }
       // Sort by createdAt descending
       rooms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      // Apply limit after sorting (since collection group query doesn't support ordering by room fields)
+      if (limit != null && rooms.length > limit) {
+        return rooms.sublist(0, limit);
+      }
       return rooms;
     });
   }
@@ -435,14 +443,41 @@ class RoomService {
   }
 
   /// Stream to check if user has opened a room (has entry in roomReads)
+  /// Uses debouncing to prevent flashing during initial load
   Stream<bool> hasOpenedRoomStream(String roomCode, String userId) {
-    return _firestore
+    final controller = StreamController<bool>.broadcast();
+    Timer? debounceTimer;
+    bool? lastEmittedValue;
+    bool hasEmittedFirst = false;
+
+    final subscription = _firestore
         .collection('users')
         .doc(userId)
         .collection('roomReads')
         .doc(roomCode)
         .snapshots()
-        .map((doc) => doc.exists);
+        .listen((doc) {
+      final hasOpened = doc.exists;
+
+      // Debounce - use longer delay for first emission
+      debounceTimer?.cancel();
+      final delay = hasEmittedFirst ? 100 : 400;
+      debounceTimer = Timer(Duration(milliseconds: delay), () {
+        if (lastEmittedValue != hasOpened) {
+          lastEmittedValue = hasOpened;
+          hasEmittedFirst = true;
+          controller.add(hasOpened);
+        }
+      });
+    }, onError: (e) => controller.addError(e));
+
+    controller.onCancel = () {
+      debounceTimer?.cancel();
+      subscription.cancel();
+      controller.close();
+    };
+
+    return controller.stream;
   }
 
   /// Stream of unread message count for a specific room and user
@@ -541,20 +576,24 @@ class RoomService {
   }
 
   /// Get all rooms for multiple teams at once
-  Stream<List<RoomModel>> userTeamRoomsStream(List<String> teamIds) {
+  Stream<List<RoomModel>> userTeamRoomsStream(List<String> teamIds, {int? limit}) {
     if (teamIds.isEmpty) {
       return Stream.value([]);
     }
 
     // Firestore limits 'whereIn' to 30 values, so we need to handle larger lists
     if (teamIds.length <= 30) {
-      return _roomsCollection
+      Query<Map<String, dynamic>> query = _roomsCollection
           .where('teamId', whereIn: teamIds)
-          .orderBy('createdAt', descending: true)
-          .snapshots()
-          .map((snapshot) => snapshot.docs
-              .map((doc) => RoomModel.fromFirestore(doc, []))
-              .toList());
+          .orderBy('createdAt', descending: true);
+
+      if (limit != null) {
+        query = query.limit(limit);
+      }
+
+      return query.snapshots().map((snapshot) => snapshot.docs
+          .map((doc) => RoomModel.fromFirestore(doc, []))
+          .toList());
     }
 
     // For more than 30 teams, combine multiple queries
@@ -577,6 +616,10 @@ class RoomService {
       }
       // Sort combined results by creation time
       allRooms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      // Apply limit after combining all chunks
+      if (limit != null && allRooms.length > limit) {
+        return allRooms.sublist(0, limit);
+      }
       return allRooms;
     }).distinct();
   }
@@ -700,11 +743,28 @@ class RoomService {
 
     final controller = StreamController<int>.broadcast();
     final roomUnreadCounts = <String, int>{};
+    final roomsReported = <String>{};
     final subscriptions = <StreamSubscription>[];
+    Timer? debounceTimer;
+    int? lastEmittedTotal;
+    bool hasEmittedFirst = false;
 
     void emitTotal() {
-      final total = roomUnreadCounts.values.fold<int>(0, (sum, count) => sum + count);
-      controller.add(total);
+      // Wait until all rooms have reported at least once before emitting
+      if (roomsReported.length < roomCodes.length) return;
+
+      // Debounce - use longer delay for first emission to ensure all data is stable
+      debounceTimer?.cancel();
+      final delay = hasEmittedFirst ? 100 : 400;
+      debounceTimer = Timer(Duration(milliseconds: delay), () {
+        final total = roomUnreadCounts.values.fold<int>(0, (sum, count) => sum + count);
+        // Only emit if total actually changed
+        if (lastEmittedTotal != total) {
+          lastEmittedTotal = total;
+          hasEmittedFirst = true;
+          controller.add(total);
+        }
+      });
     }
 
     // Subscribe to unread count for each room
@@ -712,12 +772,14 @@ class RoomService {
       roomUnreadCounts[roomCode] = 0;
       final sub = unreadCountStream(roomCode, userId).listen((count) {
         roomUnreadCounts[roomCode] = count;
+        roomsReported.add(roomCode);
         emitTotal();
       });
       subscriptions.add(sub);
     }
 
     controller.onCancel = () {
+      debounceTimer?.cancel();
       for (final sub in subscriptions) {
         sub.cancel();
       }
@@ -805,25 +867,37 @@ class RoomService {
     Set<String>? teamRoomCodes;
     Set<String>? readRoomCodes;
     StreamSubscription? teamRoomsSub;
+    Timer? debounceTimer;
+    int? lastEmittedCount;
+    bool hasEmittedFirst = false;
 
     void recalculate() {
       if (playerRoomCodes == null || readRoomCodes == null) return;
       // If user has teams, wait for teamRoomCodes to be set
       if (teamIds.isNotEmpty && teamRoomCodes == null) return;
 
-      // Combine player rooms and team rooms (where user is not host)
-      final allAccessibleRooms = <String>{
-        ...playerRoomCodes!,
-        ...?teamRoomCodes,
-      };
+      // Debounce - use longer delay for first emission to ensure all data is stable
+      debounceTimer?.cancel();
+      final delay = hasEmittedFirst ? 100 : 400;
+      debounceTimer = Timer(Duration(milliseconds: delay), () {
+        // Combine player rooms and team rooms (where user is not host)
+        final allAccessibleRooms = <String>{
+          ...playerRoomCodes!,
+          ...?teamRoomCodes,
+        };
 
-      // Count rooms that are accessible but not in readRoomCodes
-      final unseenCount = allAccessibleRooms
-          .where((code) => !readRoomCodes!.contains(code))
-          .length;
+        // Count rooms that are accessible but not in readRoomCodes
+        final unseenCount = allAccessibleRooms
+            .where((code) => !readRoomCodes!.contains(code))
+            .length;
 
-      print('[RoomService] Unseen rooms: $unseenCount (player: ${playerRoomCodes!.length}, team: ${teamRoomCodes?.length ?? 0}, read: ${readRoomCodes!.length})');
-      controller.add(unseenCount);
+        // Only emit if count actually changed
+        if (lastEmittedCount != unseenCount) {
+          lastEmittedCount = unseenCount;
+          hasEmittedFirst = true;
+          controller.add(unseenCount);
+        }
+      });
     }
 
     final playerSub = playerRoomsStream.listen(
@@ -836,13 +910,9 @@ class RoomService {
             playerRoomCodes!.add(pathParts[1]);
           }
         }
-        print('[RoomService] Player rooms: ${playerRoomCodes!.toList()}');
         recalculate();
       },
-      onError: (e) {
-        print('[RoomService] Error in playerRoomsStream: $e');
-        controller.addError(e);
-      },
+      onError: (e) => controller.addError(e),
     );
 
     // Listen to team rooms if user has teams
@@ -862,13 +932,9 @@ class RoomService {
               teamRoomCodes!.add(room.code);
             }
           }
-          print('[RoomService] Team rooms (not host): ${teamRoomCodes!.toList()}');
           recalculate();
         },
-        onError: (e) {
-          print('[RoomService] Error in teamRoomsStream: $e');
-          controller.addError(e);
-        },
+        onError: (e) => controller.addError(e),
       );
     } else {
       teamRoomCodes = <String>{};
@@ -877,16 +943,13 @@ class RoomService {
     final readsSub = roomReadsStream.listen(
       (snapshot) {
         readRoomCodes = snapshot.docs.map((doc) => doc.id).toSet();
-        print('[RoomService] Read rooms: ${readRoomCodes!.toList()}');
         recalculate();
       },
-      onError: (e) {
-        print('[RoomService] Error in roomReadsStream: $e');
-        controller.addError(e);
-      },
+      onError: (e) => controller.addError(e),
     );
 
     controller.onCancel = () {
+      debounceTimer?.cancel();
       playerSub.cancel();
       teamRoomsSub?.cancel();
       readsSub.cancel();

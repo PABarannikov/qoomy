@@ -920,18 +920,25 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Use stored reply text or find the original message
     String replyText = message.replyToText ?? '';
     String replyPlayerName = message.replyToPlayerName ?? '';
+    bool isCorrectAnswer = false;
 
     // If we have allMessages, try to find the original for more context
     if (allMessages != null && message.replyToId != null) {
       final originalMessage = allMessages.where((m) => m.id == message.replyToId).firstOrNull;
       if (originalMessage != null) {
-        replyText = originalMessage.text;
         replyPlayerName = originalMessage.playerName;
+        // Hide the actual answer text if it's marked as correct
+        if (originalMessage.isCorrect == true) {
+          isCorrectAnswer = true;
+          replyText = l10n.correctAnswer;
+        } else {
+          replyText = originalMessage.text;
+        }
       }
     }
 
-    // Truncate long reply text
-    if (replyText.length > 50) {
+    // Truncate long reply text (but not for correct answer placeholder)
+    if (!isCorrectAnswer && replyText.length > 50) {
       replyText = '${replyText.substring(0, 50)}...';
     }
 

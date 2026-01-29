@@ -98,6 +98,80 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     }
   }
 
+  Future<void> _deleteRoom(String roomCode) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Room'),
+        content: Text(
+          'Are you sure you want to delete room "$roomCode"? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Delete chat subcollection
+      final chatSnapshot = await _firestore
+          .collection('rooms')
+          .doc(roomCode)
+          .collection('chat')
+          .get();
+      for (final chatDoc in chatSnapshot.docs) {
+        await chatDoc.reference.delete();
+      }
+
+      // Delete players subcollection
+      final playersSnapshot = await _firestore
+          .collection('rooms')
+          .doc(roomCode)
+          .collection('players')
+          .get();
+      for (final playerDoc in playersSnapshot.docs) {
+        await playerDoc.reference.delete();
+      }
+
+      // Delete the room document
+      await _firestore.collection('rooms').doc(roomCode).delete();
+
+      if (_selectedRoomCode == roomCode) {
+        setState(() {
+          _selectedRoomCode = null;
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deleted room $roomCode'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting room: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -246,6 +320,12 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                     ],
                   ),
                 ],
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20),
+                color: Colors.red.shade400,
+                tooltip: 'Delete room',
+                onPressed: () => _deleteRoom(roomCode),
               ),
               onTap: () {
                 setState(() {

@@ -475,16 +475,24 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
   Widget _buildReplyPreviewInBubble(ChatMessage message, List<ChatMessage>? allMessages, AppLocalizations l10n) {
     String replyText = message.replyToText ?? '';
     String replyPlayerName = message.replyToPlayerName ?? '';
+    bool isCorrectAnswer = false;
 
     if (allMessages != null && message.replyToId != null) {
       final originalMessage = allMessages.where((m) => m.id == message.replyToId).firstOrNull;
       if (originalMessage != null) {
-        replyText = originalMessage.text;
         replyPlayerName = originalMessage.playerName;
+        // Hide the actual answer text if it's marked as correct
+        if (originalMessage.isCorrect == true) {
+          isCorrectAnswer = true;
+          replyText = l10n.correctAnswer;
+        } else {
+          replyText = originalMessage.text;
+        }
       }
     }
 
-    if (replyText.length > 50) {
+    // Truncate long reply text (but not for correct answer placeholder)
+    if (!isCorrectAnswer && replyText.length > 50) {
       replyText = '${replyText.substring(0, 50)}...';
     }
 
