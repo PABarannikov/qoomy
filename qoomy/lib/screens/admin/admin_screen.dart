@@ -15,6 +15,77 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String? _selectedRoomCode;
   bool _isDeleting = false;
+  bool _isMigrating = false;
+
+  Future<void> _migrateLastMessageAt() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Migrate Rooms'),
+        content: const Text(
+          'This will set lastMessageAt = createdAt for all rooms that don\'t have it. '
+          'This is needed for proper sorting by recent activity.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Migrate'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isMigrating = true);
+
+    try {
+      final roomsSnapshot = await _firestore.collection('rooms').get();
+      int updated = 0;
+      int skipped = 0;
+
+      for (final roomDoc in roomsSnapshot.docs) {
+        final data = roomDoc.data();
+
+        // Skip if already has lastMessageAt
+        if (data['lastMessageAt'] != null) {
+          skipped++;
+          continue;
+        }
+
+        // Set lastMessageAt to createdAt
+        final createdAt = data['createdAt'] ?? Timestamp.now();
+        await roomDoc.reference.update({'lastMessageAt': createdAt});
+        updated++;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Migration complete. Updated: $updated, Skipped: $skipped'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error during migration: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isMigrating = false);
+      }
+    }
+  }
 
   Future<void> _deleteAllRooms() async {
     final confirmed = await showDialog<bool>(
@@ -194,9 +265,31 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                         width: 300,
                         child: Column(
                           children: [
+                            // Migrate button
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: _isMigrating ? null : _migrateLastMessageAt,
+                                  icon: _isMigrating
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : const Icon(Icons.update),
+                                  label: Text(_isMigrating ? 'Migrating...' : 'Migrate lastMessageAt'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
                             // Delete All button
                             Padding(
-                              padding: const EdgeInsets.all(8.0),
+                              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                               child: SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton.icon(

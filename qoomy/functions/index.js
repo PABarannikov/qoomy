@@ -699,3 +699,56 @@ function simpleEvaluation(expectedAnswer, playerAnswer) {
     explanation: "Does not match expected answer",
   };
 }
+
+/**
+ * One-time migration to backfill lastMessageAt for rooms that don't have it.
+ * Sets lastMessageAt = createdAt for rooms missing the field.
+ * Call this once via: firebase functions:shell -> migrateLastMessageAt()
+ */
+exports.migrateLastMessageAt = onCall(async (request) => {
+  // Verify authentication (optional, remove if you want public access for migration)
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Must be authenticated");
+  }
+
+  console.log("Starting lastMessageAt migration...");
+
+  const roomsSnapshot = await db.collection("rooms").get();
+  let updated = 0;
+  let skipped = 0;
+
+  const batch = db.batch();
+  const batchLimit = 500;
+  let batchCount = 0;
+
+  for (const doc of roomsSnapshot.docs) {
+    const data = doc.data();
+
+    // Skip if already has lastMessageAt
+    if (data.lastMessageAt) {
+      skipped++;
+      continue;
+    }
+
+    // Set lastMessageAt to createdAt
+    const createdAt = data.createdAt || new Date();
+    batch.update(doc.ref, { lastMessageAt: createdAt });
+    updated++;
+    batchCount++;
+
+    // Commit batch every 500 documents
+    if (batchCount >= batchLimit) {
+      await batch.commit();
+      console.log(`Committed batch of ${batchCount} updates`);
+      batchCount = 0;
+    }
+  }
+
+  // Commit remaining updates
+  if (batchCount > 0) {
+    await batch.commit();
+  }
+
+  console.log(`Migration complete. Updated: ${updated}, Skipped: ${skipped}`);
+  return { updated, skipped, total: roomsSnapshot.size };
+});

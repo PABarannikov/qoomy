@@ -76,6 +76,7 @@ class RoomService {
       }
     }
 
+    final now = DateTime.now();
     final room = RoomModel(
       code: roomCode,
       hostId: hostId,
@@ -88,7 +89,8 @@ class RoomService {
       imageUrl: imageUrl,
       teamId: teamId,
       teamName: teamName,
-      createdAt: DateTime.now(),
+      createdAt: now,
+      lastMessageAt: now, // Initialize for proper sorting
     );
 
     await _roomsCollection.doc(roomCode).set(room.toFirestore());
@@ -375,7 +377,7 @@ class RoomService {
   Stream<List<RoomModel>> userHostedRoomsStream(String userId, {int? limit}) {
     Query<Map<String, dynamic>> query = _roomsCollection
         .where('hostId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true);
+        .orderBy('lastMessageAt', descending: true);
 
     if (limit != null) {
       query = query.limit(limit);
@@ -405,8 +407,8 @@ class RoomService {
           }
         }
       }
-      // Sort by createdAt descending
-      rooms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      // Sort by lastActivity (lastMessageAt or createdAt) descending
+      rooms.sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
       // Apply limit after sorting (since collection group query doesn't support ordering by room fields)
       if (limit != null && rooms.length > limit) {
         return rooms.sublist(0, limit);
@@ -568,7 +570,7 @@ class RoomService {
   Stream<List<RoomModel>> teamRoomsStream(String teamId) {
     return _roomsCollection
         .where('teamId', isEqualTo: teamId)
-        .orderBy('createdAt', descending: true)
+        .orderBy('lastMessageAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => RoomModel.fromFirestore(doc, []))
@@ -585,7 +587,7 @@ class RoomService {
     if (teamIds.length <= 30) {
       Query<Map<String, dynamic>> query = _roomsCollection
           .where('teamId', whereIn: teamIds)
-          .orderBy('createdAt', descending: true);
+          .orderBy('lastMessageAt', descending: true);
 
       if (limit != null) {
         query = query.limit(limit);
@@ -609,7 +611,7 @@ class RoomService {
       for (final chunk in chunks) {
         final snapshot = await _roomsCollection
             .where('teamId', whereIn: chunk)
-            .orderBy('createdAt', descending: true)
+            .orderBy('lastMessageAt', descending: true)
             .get();
         allRooms.addAll(snapshot.docs
             .map((doc) => RoomModel.fromFirestore(doc, [])));

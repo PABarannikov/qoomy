@@ -397,11 +397,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildRoomsList(BuildContext context, WidgetRef ref, String userId) {
     final paginationState = ref.watch(roomPaginationProvider);
-    final limit = paginationState.limit;
+    final displayLimit = paginationState.limit;
 
-    final hostedRoomsAsync = ref.watch(userHostedRoomsProvider((userId: userId, limit: limit)));
-    final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider((userId: userId, limit: limit)));
-    final teamRoomsAsync = ref.watch(userTeamRoomsProvider((userId: userId, limit: limit)));
+    // When unread or active filter is on, we need to load ALL rooms first
+    // to properly filter, then paginate the filtered results
+    final hasActiveFilter = _unreadFilter == UnreadFilter.unread || _statusFilter == StatusFilter.active;
+    final queryLimit = hasActiveFilter ? null : displayLimit;
+
+    final hostedRoomsAsync = ref.watch(userHostedRoomsProvider((userId: userId, limit: queryLimit)));
+    final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider((userId: userId, limit: queryLimit)));
+    final teamRoomsAsync = ref.watch(userTeamRoomsProvider((userId: userId, limit: queryLimit)));
 
     return hostedRoomsAsync.when(
       data: (hostedRooms) => joinedRoomsAsync.when(
@@ -445,75 +450,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               allRooms = allRooms.where((e) => !e.value).toList();
             }
 
-            // Note: Status filter (active) is applied in _buildRoomCard by checking hasCorrectAnswerProvider
-            // Note: Unread filter is applied in _buildRoomCard by checking unreadCountProvider
-
             // Sort by most recent activity (lastMessageAt or createdAt)
             allRooms.sort((a, b) => b.key.lastActivity.compareTo(a.key.lastActivity));
 
-            if (allRooms.isEmpty) {
-              // Check if we have rooms but they're filtered out
-              final hasAnyRooms = hostedRooms.isNotEmpty || playerRooms.isNotEmpty || uniqueTeamRooms.isNotEmpty;
-              if (hasAnyRooms) {
-                return _buildNoMatchingState(context);
-              }
-              return _buildEmptyState(context);
-            }
-
-            // Check if there might be more rooms to load
-            // If total rooms from all sources equals the limit, there could be more
-            final totalLoaded = hostedRooms.length + playerRooms.length + uniqueTeamRooms.length;
-            final hasMore = totalLoaded >= limit;
-
-            // Debug logging (print shows in browser console, debugPrint only in terminal)
-            print('[Pagination] Loaded: hosted=${hostedRooms.length}, player=${playerRooms.length}, team=${uniqueTeamRooms.length}, total=$totalLoaded, limit=$limit, displayed=${allRooms.length}, hasMore=$hasMore');
-
-            // Update pagination state
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(roomPaginationProvider.notifier).setHasMore(hasMore);
-            });
-
-            return RefreshIndicator(
-              onRefresh: () async {
-                ref.read(roomPaginationProvider.notifier).reset();
-                ref.invalidate(userHostedRoomsProvider((userId: userId, limit: limit)));
-                ref.invalidate(userJoinedRoomsProvider((userId: userId, limit: limit)));
-                ref.invalidate(userTeamRoomsProvider((userId: userId, limit: limit)));
-              },
-              child: ListView(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                children: [
-                  ...allRooms.map((entry) => _buildRoomCard(
-                    context,
-                    ref,
-                    entry.key,
-                    isHost: entry.value,
-                    userId: userId,
-                  )),
-                  // Show loading indicator when loading more
-                  if (paginationState.isLoadingMore || (hasMore && allRooms.isNotEmpty))
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Center(
-                        child: paginationState.isLoadingMore
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Text(
-                                AppLocalizations.of(context).scrollForMore,
-                                style: TextStyle(
-                                  color: Colors.grey.shade500,
-                                  fontSize: 12,
-                                ),
-                              ),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                ],
-              ),
+            // For unread/active filters, we need to build a filtered list
+            // These filters require async data, so we use a builder approach
+            return _buildFilteredRoomsList(
+              context,
+              ref,
+              allRooms,
+              userId,
+              hostedRooms.isNotEmpty || playerRooms.isNotEmpty || uniqueTeamRooms.isNotEmpty,
+              displayLimit,
+              queryLimit,
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -524,6 +473,119 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _buildErrorOrRetry(ref, e, userId),
+    );
+  }
+
+  Widget _buildFilteredRoomsList(
+    BuildContext context,
+    WidgetRef ref,
+    List<MapEntry<RoomModel, bool>> allRooms,
+    String userId,
+    bool hasAnyRooms,
+    int displayLimit,
+    int? queryLimit,
+  ) {
+    final paginationState = ref.watch(roomPaginationProvider);
+    final l10n = AppLocalizations.of(context);
+
+    // For filters that need async data, we build the list reactively
+    // by checking each room's filter criteria
+    final List<MapEntry<RoomModel, bool>> filteredRooms = [];
+    bool stillLoading = false;
+
+    for (final entry in allRooms) {
+      final room = entry.key;
+
+      // Check unread filter
+      if (_unreadFilter == UnreadFilter.unread) {
+        final unreadCountAsync = ref.watch(unreadCountProvider((roomCode: room.code, userId: userId)));
+        if (unreadCountAsync.isLoading) {
+          stillLoading = true;
+          continue; // Skip while loading
+        }
+        final unreadCount = unreadCountAsync.valueOrNull ?? 0;
+        if (unreadCount == 0) continue; // Filter out rooms with no unread
+      }
+
+      // Check active filter
+      if (_statusFilter == StatusFilter.active) {
+        if (room.status == RoomStatus.finished) continue; // Filter out finished
+        final hasCorrectAsync = ref.watch(hasCorrectAnswerProvider(room.code));
+        if (hasCorrectAsync.isLoading) {
+          stillLoading = true;
+          continue; // Skip while loading
+        }
+        final hasCorrect = hasCorrectAsync.valueOrNull ?? false;
+        if (hasCorrect) continue; // Filter out rooms with correct answer
+      }
+
+      filteredRooms.add(entry);
+    }
+
+    // If still loading filter data and we have no results yet, show loading
+    if (stillLoading && filteredRooms.isEmpty && (_unreadFilter == UnreadFilter.unread || _statusFilter == StatusFilter.active)) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (filteredRooms.isEmpty) {
+      if (hasAnyRooms) {
+        return _buildNoMatchingState(context);
+      }
+      return _buildEmptyState(context);
+    }
+
+    // Apply display pagination to filtered results
+    final displayedRooms = filteredRooms.take(displayLimit).toList();
+    final hasMore = filteredRooms.length > displayLimit || (queryLimit != null && allRooms.length >= queryLimit);
+
+    print('[Pagination] Filtered: total=${allRooms.length}, afterFilter=${filteredRooms.length}, displayed=${displayedRooms.length}, displayLimit=$displayLimit, hasMore=$hasMore');
+
+    // Update pagination state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(roomPaginationProvider.notifier).setHasMore(hasMore);
+    });
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.read(roomPaginationProvider.notifier).reset();
+        ref.invalidate(userHostedRoomsProvider((userId: userId, limit: queryLimit)));
+        ref.invalidate(userJoinedRoomsProvider((userId: userId, limit: queryLimit)));
+        ref.invalidate(userTeamRoomsProvider((userId: userId, limit: queryLimit)));
+      },
+      child: ListView(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        children: [
+          ...displayedRooms.map((entry) => _buildRoomCard(
+            context,
+            ref,
+            entry.key,
+            isHost: entry.value,
+            userId: userId,
+          )),
+          // Show loading indicator when there's more to show
+          if (paginationState.isLoadingMore || hasMore)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: paginationState.isLoadingMore
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        l10n.scrollForMore,
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 12,
+                        ),
+                      ),
+              ),
+            ),
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 
@@ -562,22 +624,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     } else {
       statusColor = Colors.orange;
       statusText = l10n.waiting;
-    }
-
-    // Apply active filter: hide rooms that have a correct answer or are finished
-    if (_statusFilter == StatusFilter.active) {
-      final hasCorrect = hasCorrectAnswerAsync.valueOrNull ?? false;
-      if (hasCorrect || room.status == RoomStatus.finished) {
-        return const SizedBox.shrink();
-      }
-    }
-
-    // Apply unread filter: hide rooms with 0 unread when filter is active
-    if (_unreadFilter == UnreadFilter.unread) {
-      final unreadCount = unreadCountAsync.valueOrNull ?? 0;
-      if (unreadCount == 0) {
-        return const SizedBox.shrink();
-      }
     }
 
     return Card(
