@@ -32,11 +32,23 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
+      final isLoading = authState.isLoading;
       final isLoggedIn = user != null;
       final isAuthRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
       final isJoinTeamRoute = state.matchedLocation.startsWith('/join-team/');
       final isWelcomeRoute = state.matchedLocation == '/welcome';
+      final isSplashRoute = state.matchedLocation == '/splash';
+
+      // While auth state is being restored, show splash screen
+      if (isLoading) {
+        return isSplashRoute ? null : '/splash';
+      }
+
+      // Auth resolved - leave splash screen
+      if (isSplashRoute) {
+        return isLoggedIn ? '/' : '/login';
+      }
 
       // If user is not logged in and trying to join a team via deep link,
       // store the invite code and redirect to login
@@ -82,6 +94,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      ),
       GoRoute(
         path: '/',
         builder: (context, state) => const HomeScreen(),
