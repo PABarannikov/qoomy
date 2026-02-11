@@ -1,7 +1,7 @@
 name: qoomy
 description: "Qoomy - Real-time multiplayer quiz game"
 publish_to: 'none'
-version: 1.0.0+39
+version: 1.0.0+40
 
 environment:
   sdk: ^3.5.4
@@ -27,7 +27,7 @@ dependencies:
   go_router: ^14.6.2
 
   # Authentication
-  google_sign_in: ^6.2.2
+  google_sign_in: ^6.3.0
   sign_in_with_apple: ^6.1.4
   crypto: ^3.0.6
 
