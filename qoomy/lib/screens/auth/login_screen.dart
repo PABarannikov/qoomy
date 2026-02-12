@@ -101,7 +101,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (result == true && mounted) {
       try {
-        await ref.read(authNotifierProvider.notifier).resetPassword(
+        await ref.read(authServiceProvider).resetPassword(
               emailController.text.trim(),
             );
         if (mounted) {
@@ -116,7 +116,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(l10n.resetLinkError),
+              content: Text('${l10n.resetLinkError}: $e'),
               backgroundColor: QoomyTheme.errorColor,
             ),
           );
