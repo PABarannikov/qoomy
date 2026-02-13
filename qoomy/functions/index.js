@@ -3,6 +3,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const { getAuth } = require("firebase-admin/auth");
 const Anthropic = require("@anthropic-ai/sdk").default;
 
 initializeApp();
@@ -13,6 +14,43 @@ const messaging = getMessaging();
 // Initialize Anthropic client
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || "",
+});
+
+/**
+ * Creates a custom auth token for a user.
+ * Used as fallback re-authentication for devices that lose Firebase Auth sessions
+ * (e.g., Samsung S25 with Play Store AAB builds).
+ *
+ * The client stores the userId in secure storage after sign-in.
+ * On startup, if Firebase Auth returns null but secure storage has a userId,
+ * the client calls this function to get a custom token and re-authenticate.
+ */
+exports.createCustomToken = onCall(async (request) => {
+  const { userId } = request.data;
+
+  if (!userId) {
+    throw new HttpsError("invalid-argument", "userId is required");
+  }
+
+  try {
+    // Verify the user actually exists in Firebase Auth
+    const userRecord = await getAuth().getUser(userId);
+
+    // Create custom token
+    const customToken = await getAuth().createCustomToken(userId);
+
+    console.log(`Created custom token for user ${userId} (${userRecord.email})`);
+
+    return { token: customToken };
+  } catch (error) {
+    console.error(`Error creating custom token for ${userId}:`, error.message);
+
+    if (error.code === "auth/user-not-found") {
+      throw new HttpsError("not-found", "User not found");
+    }
+
+    throw new HttpsError("internal", "Failed to create custom token");
+  }
 });
 
 /**

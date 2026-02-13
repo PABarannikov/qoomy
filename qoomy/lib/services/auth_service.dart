@@ -7,11 +7,19 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:crypto/crypto.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:qoomy/models/user_model.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Secure storage for persisting userId as fallback auth (Samsung S25 workaround)
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  static const _userIdKey = 'qoomy_auth_user_id';
+  static const _userEmailKey = 'qoomy_auth_user_email';
 
   // iOS requires the client ID from GoogleService-Info.plist
   final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -23,6 +31,32 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   User? get currentUser => _auth.currentUser;
+
+  /// Store userId in secure storage after successful sign-in
+  Future<void> _persistUserToSecureStorage(User user) async {
+    if (kIsWeb) return;
+    await _secureStorage.write(key: _userIdKey, value: user.uid);
+    await _secureStorage.write(key: _userEmailKey, value: user.email ?? '');
+  }
+
+  /// Clear secure storage on sign-out
+  Future<void> _clearSecureStorage() async {
+    if (kIsWeb) return;
+    await _secureStorage.delete(key: _userIdKey);
+    await _secureStorage.delete(key: _userEmailKey);
+  }
+
+  /// Read stored userId from secure storage (for fallback re-auth)
+  static Future<String?> getStoredUserId() async {
+    if (kIsWeb) return null;
+    return _secureStorage.read(key: _userIdKey);
+  }
+
+  /// Read stored email from secure storage (for diagnostics)
+  static Future<String?> getStoredEmail() async {
+    if (kIsWeb) return null;
+    return _secureStorage.read(key: _userEmailKey);
+  }
 
   Future<UserCredential> signInWithEmail(String email, String password) async {
     final userCredential = await _auth.signInWithEmailAndPassword(
@@ -44,6 +78,7 @@ class AuthService {
       );
     }
 
+    await _persistUserToSecureStorage(userCredential.user!);
     return userCredential;
   }
 
@@ -65,6 +100,7 @@ class AuthService {
       displayName,
     );
 
+    await _persistUserToSecureStorage(credential.user!);
     return credential;
   }
 
@@ -95,6 +131,7 @@ class AuthService {
       );
     }
 
+    await _persistUserToSecureStorage(userCredential.user!);
     return userCredential;
   }
 
@@ -145,6 +182,7 @@ class AuthService {
       );
     }
 
+    await _persistUserToSecureStorage(userCredential.user!);
     return userCredential;
   }
 
@@ -202,6 +240,7 @@ class AuthService {
       }
     }
 
+    await _persistUserToSecureStorage(userCredential.user!);
     return userCredential;
   }
 
@@ -221,6 +260,7 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    await _clearSecureStorage();
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
