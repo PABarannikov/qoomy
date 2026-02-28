@@ -396,17 +396,22 @@ class RoomService {
         .where('id', isEqualTo: userId)
         .snapshots()
         .asyncMap((snapshot) async {
-      final rooms = <RoomModel>[];
-      for (final playerDoc in snapshot.docs) {
-        // Get parent room code from path: rooms/{roomCode}/players/{playerId}
-        final roomCode = playerDoc.reference.parent.parent?.id;
-        if (roomCode != null) {
-          final roomDoc = await _roomsCollection.doc(roomCode).get();
-          if (roomDoc.exists) {
-            rooms.add(RoomModel.fromFirestore(roomDoc, []));
-          }
-        }
-      }
+      // Collect unique room codes from player document paths
+      final roomCodes = snapshot.docs
+          .map((doc) => doc.reference.parent.parent?.id)
+          .where((code) => code != null)
+          .cast<String>()
+          .toSet();
+
+      // Fetch all room documents in parallel
+      final roomDocs = await Future.wait(
+        roomCodes.map((code) => _roomsCollection.doc(code).get()),
+      );
+
+      final rooms = roomDocs
+          .where((doc) => doc.exists)
+          .map((doc) => RoomModel.fromFirestore(doc, []))
+          .toList();
       // Sort by lastActivity (lastMessageAt or createdAt) descending
       rooms.sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
       // Apply limit after sorting (since collection group query doesn't support ordering by room fields)
