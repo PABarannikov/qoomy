@@ -165,20 +165,9 @@ class RoomService {
   }
 
   Stream<RoomModel?> roomStream(String roomCode) {
-    return _roomsCollection.doc(roomCode).snapshots().asyncMap((doc) async {
+    return _roomsCollection.doc(roomCode).snapshots().map((doc) {
       if (!doc.exists) return null;
-
-      final playersSnapshot = await _roomsCollection
-          .doc(roomCode)
-          .collection('players')
-          .orderBy('joinedAt')
-          .get();
-
-      final players = playersSnapshot.docs
-          .map((doc) => Player.fromFirestore(doc))
-          .toList();
-
-      return RoomModel.fromFirestore(doc, players);
+      return RoomModel.fromFirestore(doc, []);
     });
   }
 
@@ -496,9 +485,12 @@ class RoomService {
     // Cache for latest values
     List<QueryDocumentSnapshot>? latestChatDocs;
     DateTime? latestLastReadAt;
+    bool chatReady = false;
+    bool readReady = false;
 
     void recalculateCount() {
-      if (latestChatDocs == null) return;
+      // Wait for both listeners to receive their first value
+      if (!chatReady || !readReady) return;
 
       int count = 0;
       if (latestLastReadAt == null) {
@@ -531,6 +523,7 @@ class RoomService {
         .snapshots()
         .listen((chatSnapshot) {
       latestChatDocs = chatSnapshot.docs;
+      chatReady = true;
       recalculateCount();
     });
 
@@ -547,6 +540,7 @@ class RoomService {
       } else {
         latestLastReadAt = null;
       }
+      readReady = true;
       recalculateCount();
     });
 
