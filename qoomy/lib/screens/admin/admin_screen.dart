@@ -16,6 +16,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   String? _selectedRoomCode;
   bool _isDeleting = false;
   bool _isMigrating = false;
+  String _searchQuery = '';
 
   Future<void> _migrateLastMessageAt() async {
     final confirmed = await showDialog<bool>(
@@ -310,6 +311,28 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                               ),
                             ),
                             const Divider(height: 1),
+                            Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: TextField(
+                                decoration: InputDecoration(
+                                  hintText: 'Search by room ID...',
+                                  prefixIcon: const Icon(Icons.search, size: 20),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  suffixIcon: _searchQuery.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(Icons.clear, size: 18),
+                                          onPressed: () => setState(() => _searchQuery = ''),
+                                        )
+                                      : null,
+                                ),
+                                onChanged: (value) => setState(() => _searchQuery = value.trim().toUpperCase()),
+                              ),
+                            ),
+                            const Divider(height: 1),
                             Expanded(child: _buildRoomsList()),
                           ],
                         ),
@@ -353,7 +376,14 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           return const Center(child: Text('No rooms found'));
         }
 
-        final rooms = snapshot.data!.docs;
+        var rooms = snapshot.data!.docs;
+        if (_searchQuery.isNotEmpty) {
+          rooms = rooms.where((doc) => doc.id.toUpperCase().contains(_searchQuery)).toList();
+        }
+
+        if (rooms.isEmpty) {
+          return const Center(child: Text('No rooms found'));
+        }
 
         return ListView.builder(
           itemCount: rooms.length,
