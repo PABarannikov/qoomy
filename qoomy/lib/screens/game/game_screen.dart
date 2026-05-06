@@ -149,7 +149,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         Future.delayed(const Duration(milliseconds: 800), () {
           if (mounted) {
             ref.invalidate(roomProvider(widget.roomCode));
-            ref.invalidate(playersProvider(widget.roomCode));
             ref.invalidate(chatProvider(widget.roomCode));
             Future.delayed(const Duration(milliseconds: 100), () {
               if (mounted) {
@@ -202,7 +201,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   @override
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomProvider(widget.roomCode));
-    final playersAsync = ref.watch(playersProvider(widget.roomCode));
+    // playersProvider intentionally NOT watched: this screen never renders the
+    // player list. Subscribing to it adds a Firestore listener that does network
+    // work (fromCache=false on first emit), and the SDK serializes other cache
+    // reads behind it — making the screen take seconds to show the question.
     final chatAsync = ref.watch(chatProvider(widget.roomCode));
     final currentUser = ref.watch(currentUserProvider).valueOrNull;
 
@@ -242,7 +244,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 }
 
                 final isHost = currentUser?.id == room.hostId;
-                return _buildGameContent(context, room, playersAsync, chatAsync, l10n, isHost, currentUser);
+                return _buildGameContent(context, room, chatAsync, l10n, isHost, currentUser);
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => _buildErrorOrRetry(e),
@@ -256,7 +258,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   Widget _buildGameContent(
     BuildContext context,
     RoomModel room,
-    AsyncValue<List<Player>> playersAsync,
     AsyncValue<List<ChatMessage>> chatAsync,
     AppLocalizations l10n,
     bool isHost,
@@ -278,8 +279,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Combined: user can see answer if they got it right OR revealed it
     final canSeeAnswer = hasCorrectAnswer || hasRevealedAnswer;
 
-    // Check if messages are empty to determine layout
-    final hasMessages = chatAsync.whenOrNull(data: (messages) => messages.isNotEmpty) ?? false;
+    // Render question/answer immediately even while chat is still loading.
+    // Messages list shows what's available so far; spinner shown only if chat
+    // has errored or is still on its very first emission with no data yet.
+    final messages = chatAsync.valueOrNull ?? const <ChatMessage>[];
+    final isChatLoadingInitial = chatAsync.isLoading && chatAsync.valueOrNull == null;
+    final chatError = chatAsync.hasError ? chatAsync.error : null;
 
     return Column(
       children: [
@@ -287,45 +292,23 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         _buildHeader(context, room, l10n, isHost),
 
         // Scrollable content area (question + answer + chat)
-        // Use Expanded only when there are messages, otherwise let it size to content
-        if (hasMessages)
-          Expanded(
-            child: Listener(
-              onPointerMove: _onPointerMove,
-              child: chatAsync.when(
-                data: (messages) => _buildScrollableContent(
-                  room,
-                  messages,
-                  isHost,
-                  canSeeAnswer,
-                  hasRevealedAnswer && !hasCorrectAnswer,
-                  currentUser?.id,
-                  l10n,
-                ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => _buildErrorOrRetry(e),
-              ),
-            ),
-          )
-        else
-          Expanded(
-            child: Listener(
-              onPointerMove: _onPointerMove,
-              child: chatAsync.when(
-                data: (messages) => _buildScrollableContent(
-                  room,
-                  messages,
-                  isHost,
-                  canSeeAnswer,
-                  hasRevealedAnswer && !hasCorrectAnswer,
-                  currentUser?.id,
-                  l10n,
-                ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => _buildErrorOrRetry(e),
-              ),
-            ),
+        Expanded(
+          child: Listener(
+            onPointerMove: _onPointerMove,
+            child: chatError != null
+                ? _buildErrorOrRetry(chatError)
+                : _buildScrollableContent(
+                    room,
+                    messages,
+                    isHost,
+                    canSeeAnswer,
+                    hasRevealedAnswer && !hasCorrectAnswer,
+                    currentUser?.id,
+                    l10n,
+                    isChatLoading: isChatLoadingInitial,
+                  ),
           ),
+        ),
 
         // Message input (different for host and player)
         if (isHost)
@@ -343,8 +326,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     bool canSeeAnswer,
     bool hasRevealed,
     String? currentUserId,
-    AppLocalizations l10n,
-  ) {
+    AppLocalizations l10n, {
+    bool isChatLoading = false,
+  }) {
     final isAiMode = room.evaluationMode == EvaluationMode.ai;
     final screenHeight = MediaQuery.of(context).size.height;
     final maxHeaderHeight = screenHeight * 0.65; // Max 65% of screen for header
@@ -420,11 +404,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             children: [
               buildHeader(),
               const Spacer(),
-              Text(
-                l10n.noMessagesYet,
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
+              if (isChatLoading)
+                const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              else
+                Text(
+                  l10n.noMessagesYet,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
             ],
           ),
         ),

@@ -37,17 +37,19 @@ Respond with JSON only in this format:
 {"isCorrect": true/false, "confidence": 0.0-1.0, "explanation": "brief reason"}
 
 Be lenient with:
-- Spelling variations
+- Spelling variations and typos
 - Synonyms
-- Different phrasing
-- Abbreviations
+- Different phrasing of the same answer
+- Common abbreviations and well-known short forms
 - Character aliases and alternative names (e.g., "Edmond Dantès" = "Count of Monte Cristo", birth name = title/known name)
 - The same person, character, or entity referred to by a different name (maiden name, pen name, stage name, nickname, title, etc.)
 
 Be strict about:
 - Fundamentally wrong answers
 - Different concepts
-- Unrelated responses`,
+- Unrelated responses
+- Random fragments or substrings of the correct answer (e.g., if the answer is "Троянский конь" then "ной" or "кон" are NOT correct — they are meaningless fragments, not abbreviations)
+- A few letters that happen to appear inside the correct answer are NOT an abbreviation — they must form a recognizable short form of the answer`,
         },
       ],
     });

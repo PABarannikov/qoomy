@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,15 +78,15 @@ final roomPaginationProvider =
   return RoomPaginationNotifier();
 });
 
-final roomProvider = StreamProvider.family<RoomModel?, String>((ref, roomCode) {
+final roomProvider = StreamProvider.autoDispose.family<RoomModel?, String>((ref, roomCode) {
   return ref.watch(roomServiceProvider).roomStream(roomCode);
 });
 
-final playersProvider = StreamProvider.family<List<Player>, String>((ref, roomCode) {
+final playersProvider = StreamProvider.autoDispose.family<List<Player>, String>((ref, roomCode) {
   return ref.watch(roomServiceProvider).playersStream(roomCode);
 });
 
-final chatProvider = StreamProvider.family<List<ChatMessage>, String>((ref, roomCode) {
+final chatProvider = StreamProvider.autoDispose.family<List<ChatMessage>, String>((ref, roomCode) {
   return ref.watch(roomServiceProvider).chatStream(roomCode);
 });
 
@@ -100,60 +101,57 @@ final userJoinedRoomsProvider = StreamProvider.family<List<RoomModel>, ({String 
 });
 
 /// Provider for unread message count of a specific room
-final unreadCountProvider = StreamProvider.family<int, ({String roomCode, String userId})>((ref, params) {
+final unreadCountProvider = StreamProvider.autoDispose.family<int, ({String roomCode, String userId})>((ref, params) {
   return ref.watch(roomServiceProvider).unreadCountStream(params.roomCode, params.userId);
 });
 
-/// Provider for total unread message count across all user's rooms (hosted, joined, AND team rooms)
-/// Note: Uses no limit to count ALL rooms for badge accuracy
+/// Provider for total unread message count across all user's rooms (hosted, joined, AND team rooms).
+///
+/// Periodically polls Firestore via getTotalUnreadCountDirect every 5 seconds.
+/// Previously used real-time listeners on every room's chat + roomReads collections —
+/// with 25+ rooms that meant 50+ persistent Firestore listeners blocking the SDK queue
+/// and making room navigation take 5+ seconds. Polling once every 5s is plenty
+/// accurate for a badge count and keeps the SDK quiet.
 final totalUnreadCountProvider = StreamProvider.family<int, String>((ref, userId) {
-  final hostedRoomsAsync = ref.watch(userHostedRoomsProvider((userId: userId, limit: null)));
-  final joinedRoomsAsync = ref.watch(userJoinedRoomsProvider((userId: userId, limit: null)));
-  final teamRoomsAsync = ref.watch(userTeamRoomsProvider((userId: userId, limit: null)));
   final roomService = ref.watch(roomServiceProvider);
 
-  // Use valueOrNull to get available data immediately, even during loading
-  // This fixes release build issue where nested .when() loading states never update
-  final hostedRooms = hostedRoomsAsync.valueOrNull ?? [];
-  final joinedRooms = joinedRoomsAsync.valueOrNull ?? [];
-  final teamRooms = teamRoomsAsync.valueOrNull ?? [];
+  final controller = StreamController<int>.broadcast();
+  Timer? timer;
 
-  // Deduplicate rooms by code
-  final hostedCodes = hostedRooms.map((r) => r.code).toSet();
-  final joinedCodes = joinedRooms.map((r) => r.code).toSet();
-
-  // Get unique team rooms (not in hosted or joined)
-  final uniqueTeamRooms = teamRooms
-      .where((r) => !hostedCodes.contains(r.code) && !joinedCodes.contains(r.code))
-      .toList();
-
-  // Combine all unique room codes
-  final allRoomCodes = <String>{
-    ...hostedCodes,
-    ...joinedCodes,
-    ...uniqueTeamRooms.map((r) => r.code),
-  };
-
-  if (allRoomCodes.isEmpty) {
-    return Stream.value(0);
+  Future<void> refresh() async {
+    if (controller.isClosed) return;
+    final teamIds = ref.read(userTeamsProvider(userId)).valueOrNull?.map((t) => t.id).toList() ?? [];
+    try {
+      final count = await roomService.getTotalUnreadCountDirect(userId, teamIds);
+      if (!controller.isClosed) controller.add(count);
+    } catch (_) {
+      // ignore - badge will update on next refresh
+    }
   }
 
-  // Create a stream that combines unread counts from all rooms
-  return roomService.combinedUnreadCountStream(userId, allRoomCodes.toList());
+  refresh();
+  timer = Timer.periodic(const Duration(seconds: 5), (_) => refresh());
+
+  ref.onDispose(() {
+    timer?.cancel();
+    controller.close();
+  });
+
+  return controller.stream;
 });
 
 /// Provider to check if a room has at least one correct answer
-final hasCorrectAnswerProvider = StreamProvider.family<bool, String>((ref, roomCode) {
+final hasCorrectAnswerProvider = StreamProvider.autoDispose.family<bool, String>((ref, roomCode) {
   return ref.watch(roomServiceProvider).hasCorrectAnswerStream(roomCode);
 });
 
 /// Provider to check if user has revealed the correct answer for a room
-final hasRevealedAnswerProvider = StreamProvider.family<bool, ({String roomCode, String userId})>((ref, params) {
+final hasRevealedAnswerProvider = StreamProvider.autoDispose.family<bool, ({String roomCode, String userId})>((ref, params) {
   return ref.watch(roomServiceProvider).hasRevealedAnswerStream(params.roomCode, params.userId);
 });
 
 /// Provider to check if user has opened a room (has entry in roomReads)
-final hasOpenedRoomProvider = StreamProvider.family<bool, ({String roomCode, String userId})>((ref, params) {
+final hasOpenedRoomProvider = StreamProvider.autoDispose.family<bool, ({String roomCode, String userId})>((ref, params) {
   return ref.watch(roomServiceProvider).hasOpenedRoomStream(params.roomCode, params.userId);
 });
 

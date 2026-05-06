@@ -941,15 +941,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       await context.push('/game/${room.code}');
     }
 
-    // Force refresh after returning from room
-    if (mounted) {
-      final limit = ref.read(roomPaginationProvider).limit;
-      ref.invalidate(unreadCountProvider((roomCode: room.code, userId: userId)));
-      // Refresh room lists to update sorting by lastMessageAt
-      ref.invalidate(userHostedRoomsProvider((userId: userId, limit: limit)));
-      ref.invalidate(userJoinedRoomsProvider((userId: userId, limit: limit)));
-      ref.invalidate(userTeamRoomsProvider((userId: userId, limit: limit)));
-    }
+    // Note: deliberately NOT invalidating providers here. These are streams,
+    // they auto-update when underlying data changes. Invalidating tears down
+    // and recreates ~50 Firestore listeners on the home screen, which jams
+    // the SDK queue and makes subsequent room taps take many seconds.
   }
 
   Widget _buildBottomButtons(BuildContext context) {
