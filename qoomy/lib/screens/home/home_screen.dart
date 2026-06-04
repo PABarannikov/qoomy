@@ -117,6 +117,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        if (userId != null) _buildTeamDropdown(l10n, userId, isDark),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
@@ -157,7 +158,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
         ),
-        if (userId != null) _buildTeamDropdown(l10n, userId, isDark),
         // Filter description
         Text(
           _getFilterDescription(l10n),
@@ -177,14 +177,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (teams.isEmpty) return const SizedBox.shrink();
     final selectedValid = teams.any((t) => t.id == _selectedTeamId);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: _selectedTeamId != null
               ? QoomyTheme.primaryColor.withOpacity(0.1)
               : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _selectedTeamId != null
                 ? QoomyTheme.primaryColor
@@ -194,19 +195,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String?>(
             value: selectedValid ? _selectedTeamId : null,
+            isExpanded: true,
             isDense: true,
             borderRadius: BorderRadius.circular(12),
-            icon: const Icon(Icons.arrow_drop_down, size: 20),
-            style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
+            icon: const Icon(Icons.arrow_drop_down, size: 22),
+            style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
             dropdownColor: isDark ? Colors.grey.shade800 : Colors.white,
             items: [
               DropdownMenuItem<String?>(
                 value: null,
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.groups, size: 16, color: Colors.grey.shade600),
-                    const SizedBox(width: 6),
+                    Icon(Icons.groups, size: 18, color: Colors.grey.shade600),
+                    const SizedBox(width: 8),
                     Text(l10n.allTeams),
                   ],
                 ),
@@ -214,14 +215,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ...teams.map((t) => DropdownMenuItem<String?>(
                     value: t.id,
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.group, size: 16, color: Colors.blue),
-                        const SizedBox(width: 6),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 180),
-                          child: Text(t.name, overflow: TextOverflow.ellipsis),
-                        ),
+                        const Icon(Icons.group, size: 18, color: Colors.blue),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(t.name, overflow: TextOverflow.ellipsis)),
                       ],
                     ),
                   )),
