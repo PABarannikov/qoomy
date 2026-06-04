@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qoomy/providers/auth_provider.dart';
 import 'package:qoomy/providers/room_provider.dart';
+import 'package:qoomy/providers/team_provider.dart';
 import 'package:qoomy/models/room_model.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/l10n/app_localizations.dart';
@@ -23,6 +24,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   RoleFilter _roleFilter = RoleFilter.all;
   StatusFilter _statusFilter = StatusFilter.all;
   UnreadFilter _unreadFilter = UnreadFilter.all;
+  String? _selectedTeamId;
   bool _hasRetried = false;
   String? _lastErrorUserId;
   final ScrollController _scrollController = ScrollController();
@@ -155,6 +157,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
         ),
+        if (userId != null) _buildTeamDropdown(l10n, userId, isDark),
         // Filter description
         Text(
           _getFilterDescription(l10n),
@@ -165,6 +168,68 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         const SizedBox(height: 4),
       ],
+    );
+  }
+
+  // Team filter dropdown — lets the user narrow questions to one of their teams.
+  Widget _buildTeamDropdown(AppLocalizations l10n, String userId, bool isDark) {
+    final teams = ref.watch(userTeamsProvider(userId)).valueOrNull ?? [];
+    if (teams.isEmpty) return const SizedBox.shrink();
+    final selectedValid = teams.any((t) => t.id == _selectedTeamId);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: _selectedTeamId != null
+              ? QoomyTheme.primaryColor.withOpacity(0.1)
+              : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: _selectedTeamId != null
+                ? QoomyTheme.primaryColor
+                : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+          ),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String?>(
+            value: selectedValid ? _selectedTeamId : null,
+            isDense: true,
+            borderRadius: BorderRadius.circular(12),
+            icon: const Icon(Icons.arrow_drop_down, size: 20),
+            style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
+            dropdownColor: isDark ? Colors.grey.shade800 : Colors.white,
+            items: [
+              DropdownMenuItem<String?>(
+                value: null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.groups, size: 16, color: Colors.grey.shade600),
+                    const SizedBox(width: 6),
+                    Text(l10n.allTeams),
+                  ],
+                ),
+              ),
+              ...teams.map((t) => DropdownMenuItem<String?>(
+                    value: t.id,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.group, size: 16, color: Colors.blue),
+                        const SizedBox(width: 6),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 180),
+                          child: Text(t.name, overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
+                    ),
+                  )),
+            ],
+            onChanged: (value) => setState(() => _selectedTeamId = value),
+          ),
+        ),
+      ),
     );
   }
 
@@ -401,7 +466,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // When unread or active filter is on, we need to load ALL rooms first
     // to properly filter, then paginate the filtered results
-    final hasActiveFilter = _unreadFilter == UnreadFilter.unread || _statusFilter == StatusFilter.active;
+    final hasActiveFilter = _unreadFilter == UnreadFilter.unread || _statusFilter == StatusFilter.active || _selectedTeamId != null;
     final queryLimit = hasActiveFilter ? null : displayLimit;
 
     final hostedRoomsAsync = ref.watch(userHostedRoomsProvider((userId: userId, limit: queryLimit)));
@@ -448,6 +513,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               allRooms = allRooms.where((e) => e.value).toList();
             } else if (_roleFilter == RoleFilter.player) {
               allRooms = allRooms.where((e) => !e.value).toList();
+            }
+
+            // Apply team filter
+            if (_selectedTeamId != null) {
+              allRooms = allRooms.where((e) => e.key.teamId == _selectedTeamId).toList();
             }
 
             // Sort by most recent activity (lastMessageAt or createdAt)

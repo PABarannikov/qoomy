@@ -191,6 +191,7 @@ class AppLocalizations {
 
       // Teams
       'teams': 'Teams',
+      'allTeams': 'All teams',
       'myTeams': 'My Teams',
       'createTeam': 'Create Team',
       'joinTeam': 'Join Team',
@@ -438,6 +439,7 @@ class AppLocalizations {
 
       // Teams
       'teams': 'Команды',
+      'allTeams': 'Все команды',
       'myTeams': 'Мои команды',
       'createTeam': 'Создать команду',
       'joinTeam': 'Присоединиться к команде',
@@ -657,6 +659,7 @@ class AppLocalizations {
   String get unread => get('unread');
   String get noMatchingQuestions => get('noMatchingQuestions');
   String get teams => get('teams');
+  String get allTeams => get('allTeams');
   String get myTeams => get('myTeams');
   String get createTeam => get('createTeam');
   String get joinTeam => get('joinTeam');
