@@ -71,6 +71,7 @@ class RoomModel {
   final String question;
   final String answer;
   final String? comment;
+  final String? zachet;
   final String? imageUrl;
   final String? teamId;
   final String? teamName;
@@ -87,6 +88,7 @@ class RoomModel {
     required this.question,
     required this.answer,
     this.comment,
+    this.zachet,
     this.imageUrl,
     this.teamId,
     this.teamName,
@@ -112,6 +114,7 @@ class RoomModel {
       question: data['question'] ?? '',
       answer: data['answer'] ?? '',
       comment: data['comment'],
+      zachet: data['zachet'],
       imageUrl: data['imageUrl'],
       teamId: data['teamId'],
       teamName: data['teamName'],
@@ -130,6 +133,7 @@ class RoomModel {
       'question': question,
       'answer': answer,
       'comment': comment,
+      'zachet': zachet,
       'imageUrl': imageUrl,
       'teamId': teamId,
       'teamName': teamName,
@@ -152,6 +156,7 @@ class RoomModel {
     String? question,
     String? answer,
     String? comment,
+    String? zachet,
     String? imageUrl,
     String? teamId,
     String? teamName,
@@ -168,6 +173,7 @@ class RoomModel {
       question: question ?? this.question,
       answer: answer ?? this.answer,
       comment: comment ?? this.comment,
+      zachet: zachet ?? this.zachet,
       imageUrl: imageUrl ?? this.imageUrl,
       teamId: teamId ?? this.teamId,
       teamName: teamName ?? this.teamName,

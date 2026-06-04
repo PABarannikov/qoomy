@@ -1343,6 +1343,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           ref.read(aiServiceProvider).evaluateAnswer(
             question: room.question,
             expectedAnswer: room.answer,
+            acceptableAnswers: room.zachet,
             playerAnswer: answerText,
             roomCode: widget.roomCode,
             messageId: messageId,

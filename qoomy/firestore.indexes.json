@@ -49,6 +49,15 @@
       ]
     },
     {
+      "collectionGroup": "questionBank",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "postable", "order": "ASCENDING" },
+        { "fieldPath": "used", "order": "ASCENDING" },
+        { "fieldPath": "rand", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "chat",
       "queryScope": "COLLECTION_GROUP",
       "fields": [

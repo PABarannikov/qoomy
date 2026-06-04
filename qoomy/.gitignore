@@ -48,3 +48,10 @@ app.*.map.json
 
 # APNs keys (sensitive)
 ios/keys/*.p8
+
+# gotquestions mirror tool
+functions/scripts/.mirror_progress.json
+
+# Firebase service-account keys (NEVER commit)
+**/serviceAccount*.json
+**/*-firebase-adminsdk-*.json

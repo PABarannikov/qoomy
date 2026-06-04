@@ -64,6 +64,17 @@ service cloud.firestore {
       }
     }
 
+    // Question bank (admin + Cloud Functions only). Clients never read these;
+    // Cloud Functions use the admin SDK and bypass rules entirely.
+    match /questionBank/{questionId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Daily question set audit / idempotency records (admin + Functions only).
+    match /dailyQuestionSets/{date} {
+      allow read, write: if isAdmin();
+    }
+
     // Teams collection
     match /teams/{teamId} {
       // Anyone authenticated can read teams (needed for invite code lookup)

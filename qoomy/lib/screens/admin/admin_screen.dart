@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:qoomy/config/theme.dart';
 import 'package:qoomy/widgets/app_header.dart';
 
@@ -17,6 +18,212 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   bool _isDeleting = false;
   bool _isMigrating = false;
   String _searchQuery = '';
+  int? _bankTotal;
+  int? _bankUnused;
+  bool _isImporting = false;
+  bool _isPosting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBankCounts();
+  }
+
+  Future<void> _loadBankCounts() async {
+    try {
+      final total = await _firestore.collection('questionBank').count().get();
+      final unused = await _firestore
+          .collection('questionBank')
+          .where('postable', isEqualTo: true)
+          .where('used', isEqualTo: false)
+          .count()
+          .get();
+      if (mounted) {
+        setState(() {
+          _bankTotal = total.count;
+          _bankUnused = unused.count;
+        });
+      }
+    } catch (_) {
+      // Counts are best-effort; ignore failures.
+    }
+  }
+
+  Future<void> _showImportDialog() async {
+    final idsController = TextEditingController();
+    final pagesController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Import from gotquestions.online'),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Paste gotquestions pack IDs or pack URLs (one per line). '
+                'Questions with images/audio are skipped and duplicates are ignored.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: idsController,
+                minLines: 3,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'Pack IDs or URLs',
+                  hintText: '123\nhttps://gotquestions.online/pack/456',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: pagesController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Or import N recent pages (optional)',
+                  hintText: 'e.g. 2',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Import'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final tokens = idsController.text
+        .split(RegExp(r'[\s,]+'))
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+    final recentPages = int.tryParse(pagesController.text.trim()) ?? 0;
+
+    if (tokens.isEmpty && recentPages <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enter pack IDs/URLs or a page count')),
+        );
+      }
+      return;
+    }
+
+    await _importQuestions(tokens, recentPages);
+  }
+
+  Future<void> _importQuestions(List<String> packIds, int recentPages) async {
+    setState(() => _isImporting = true);
+    try {
+      final callable = FirebaseFunctions.instance.httpsCallable(
+        'importGotQuestions',
+        options: HttpsCallableOptions(timeout: const Duration(seconds: 300)),
+      );
+      final result = await callable.call(<String, dynamic>{
+        if (packIds.isNotEmpty) 'packIds': packIds,
+        if (recentPages > 0) 'recentPages': recentPages,
+      });
+      final data = Map<String, dynamic>.from(result.data as Map);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Imported: added ${data['added']}, duplicates ${data['duplicates'] ?? 0}, '
+              'skipped ${data['skipped']} (from ${data['packs']} packs)',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      await _loadBankCounts();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Import failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isImporting = false);
+    }
+  }
+
+  Future<void> _confirmPostToday() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Post today's questions"),
+        content: Text(
+          'This will create the next 10 unused questions as rooms for EVERY team '
+          'right now${_bankUnused != null ? ' ($_bankUnused ready in bank)' : ''}. Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Post now'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _postToday();
+  }
+
+  Future<void> _postToday() async {
+    setState(() => _isPosting = true);
+    try {
+      final callable = FirebaseFunctions.instance.httpsCallable(
+        'postDailyTeamQuestionsNow',
+        options: HttpsCallableOptions(timeout: const Duration(seconds: 540)),
+      );
+      final result = await callable.call(<String, dynamic>{'force': true});
+      final data = Map<String, dynamic>.from(result.data as Map);
+      if (mounted) {
+        final msg = data['reason'] == 'empty-bank'
+            ? 'Bank has no unused questions — import some first'
+            : 'Posted ${data['posted']} questions to ${data['teams']} teams '
+                '(${data['roomsCreated']} rooms)';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.green),
+        );
+      }
+      await _loadBankCounts();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Post failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPosting = false);
+    }
+  }
 
   Future<void> _migrateLastMessageAt() async {
     final confirmed = await showDialog<bool>(
@@ -308,6 +515,55 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                                     foregroundColor: Colors.white,
                                   ),
                                 ),
+                              ),
+                            ),
+                            const Divider(height: 1),
+                            // Question Bank section (daily ЧГК questions)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    _bankTotal == null
+                                        ? 'Bank: …'
+                                        : 'Bank: $_bankTotal total · ${_bankUnused ?? 0} ready',
+                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  ElevatedButton.icon(
+                                    onPressed: _isImporting ? null : _showImportDialog,
+                                    icon: _isImporting
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                          )
+                                        : const Icon(Icons.download),
+                                    label: Text(_isImporting ? 'Importing...' : 'Import questions'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.teal,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  ElevatedButton.icon(
+                                    onPressed: _isPosting ? null : _confirmPostToday,
+                                    icon: _isPosting
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                          )
+                                        : const Icon(Icons.send),
+                                    label: Text(_isPosting ? 'Posting...' : "Post today's questions"),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.deepPurple,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             const Divider(height: 1),

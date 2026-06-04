@@ -1,9 +1,12 @@
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { getAuth } = require("firebase-admin/auth");
+const { getStorage } = require("firebase-admin/storage");
+const { randomUUID } = require("crypto");
 const Anthropic = require("@anthropic-ai/sdk").default;
 
 initializeApp();
@@ -553,7 +556,7 @@ exports.evaluateAnswerWithAI = onCall(
       );
     }
 
-    const { question, expectedAnswer, playerAnswer, roomCode, messageId, playerId } = request.data;
+    const { question, expectedAnswer, playerAnswer, roomCode, messageId, playerId, acceptableAnswers } = request.data;
 
     console.log(`AI Evaluation request: room=${roomCode}, messageId=${messageId}, playerId=${playerId}`);
     console.log(`Question: "${question}", Expected: "${expectedAnswer}", Player: "${playerAnswer}"`);
@@ -567,7 +570,7 @@ exports.evaluateAnswerWithAI = onCall(
     }
 
     try {
-      const result = await evaluateAnswer(question, expectedAnswer, playerAnswer);
+      const result = await evaluateAnswer(question, expectedAnswer, playerAnswer, acceptableAnswers);
 
       // Update the chat message with AI evaluation result
       if (roomCode && messageId) {
@@ -640,7 +643,7 @@ exports.evaluateAnswerWithAI = onCall(
 /**
  * Evaluate an answer using Claude AI.
  */
-async function evaluateAnswer(question, expectedAnswer, playerAnswer) {
+async function evaluateAnswer(question, expectedAnswer, playerAnswer, acceptableAnswers) {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.warn("ANTHROPIC_API_KEY not set, falling back to simple comparison");
     return simpleEvaluation(expectedAnswer, playerAnswer);
@@ -656,7 +659,7 @@ async function evaluateAnswer(question, expectedAnswer, playerAnswer) {
           content: `You are evaluating quiz answers. Determine if the player's answer is semantically correct, even if not an exact match.
 
 Question: ${question}
-Expected Answer: ${expectedAnswer}
+Expected Answer: ${expectedAnswer}${acceptableAnswers ? `\nAlso accepted (зачёт): ${acceptableAnswers}` : ""}
 Player Answer: ${playerAnswer}
 
 Respond with JSON only in this format:
@@ -790,3 +793,507 @@ exports.migrateLastMessageAt = onCall(async (request) => {
   console.log(`Migration complete. Updated: ${updated}, Skipped: ${skipped}`);
   return { updated, skipped, total: roomsSnapshot.size };
 });
+
+// ============================================================================
+// Daily ЧГК questions: curated bank + gotquestions.online import + scheduler
+//
+// Model recap: a "question" is a room; a team room is a room with teamId set,
+// which auto-surfaces to every team member. Auto-posted rooms use AI evaluation
+// so they need no human host (members' answers are graded by evaluateAnswerWithAI).
+// ============================================================================
+
+const ADMIN_EMAIL = "pabarannikov@gmail.com";
+const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // excludes confusing chars
+const GQ_BASE = "https://gotquestions.online";
+
+/** Throws unless the caller is the admin (matches firestore.rules isAdmin()). */
+function assertAdmin(request) {
+  const email = request.auth && request.auth.token && request.auth.token.email;
+  if (email !== ADMIN_EMAIL) {
+    throw new HttpsError("permission-denied", "Admin only");
+  }
+}
+
+/** Fetch JSON with a hard timeout (Node 20 global fetch). */
+async function fetchJson(url, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "QoomyBot/1.0 (+https://qoomy.online)",
+      },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Extract numeric pack IDs from raw IDs and/or gotquestions URLs. */
+function parsePackIds(packIds, packUrls) {
+  const ids = new Set();
+  (packIds || []).forEach((v) => {
+    const m = String(v).match(/(\d+)/);
+    if (m) ids.add(Number(m[1]));
+  });
+  (packUrls || []).forEach((u) => {
+    const m = String(u).match(/pack\/(\d+)/);
+    if (m) ids.add(Number(m[1]));
+  });
+  return Array.from(ids);
+}
+
+/** A gotquestions question we can't render as a plain text Q&A room. */
+function questionHasMedia(q) {
+  return Boolean(
+    q.razdatkaPic || q.answerPic || q.audio || q.commentAudio || q.commentPic
+  );
+}
+
+/**
+ * Multi-part questions (дуплет / блиц / триплет — two or more sub-answers handed
+ * in on one blank) don't fit a single-answer room, so they're never posted.
+ * Detected by a leading дуплет/блиц marker or 2+ numbered answers ("1. … 2. …").
+ */
+function isMultiPartQuestion(text, answer) {
+  if (/^\s*[«"(\[]?\s*(дуплет|блиц|триплет|перестрелка)/i.test(text || "")) {
+    return true;
+  }
+  const parts = ((answer || "").match(/(^|[\s;(])\d+[.)]\s/g) || []).length;
+  return parts >= 2;
+}
+
+/**
+ * Strip editorial host-notes like "[Ведущему: …]" / "[Чтецу: …]" from question
+ * text — they aren't part of the question and shouldn't be shown to players or
+ * confuse the quality judge.
+ */
+function cleanQuestionText(text) {
+  if (!text) return text;
+  return text
+    .replace(/\[[^\]]*(ведущему|чтецу|читающему|ведущим)[^\]]*\]/gi, " ")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Normalize a gotquestions question into a questionBank document (or null to skip). */
+function normalizeGqQuestion(q, pack) {
+  if (!q || q.id == null) return null;
+  const text = (q.text || "").trim();
+  if (!text) return null;
+  const answer = (q.answer || "").trim();
+  const multiPart = isMultiPartQuestion(text, answer);
+  // Question handout image (shown WITH the question) — supportable. Comment
+  // image/audio are explanation-only (non-blocking). Question audio / answer
+  // image can't be represented, so they block posting.
+  const razdatkaPic = (q.razdatkaPic || "").trim();
+  const blockingMedia = Boolean((q.audio || "").trim() || (q.answerPic || "").trim());
+  const imageUrl = razdatkaPic
+    ? (razdatkaPic.startsWith("http") ? razdatkaPic : GQ_BASE + razdatkaPic)
+    : "";
+  const razdatka = (q.razdatkaText || "").trim();
+  const question = cleanQuestionText(razdatka ? `${razdatka}\n\n${text}` : text);
+  const authors = Array.isArray(q.authors)
+    ? q.authors.map((a) => a && a.name).filter(Boolean).join(", ")
+    : "";
+  return {
+    source: "gotquestions",
+    sourceId: String(q.id),
+    sourceUrl: `${GQ_BASE}/question/${q.id}`,
+    packId: pack && pack.id != null
+      ? Number(pack.id)
+      : (q.packId != null ? Number(q.packId) : null),
+    packTitle: (pack && pack.title) || q.packTitle || "",
+    question,
+    answer,
+    zachet: (q.zachet || "").trim(),
+    nezachet: (q.nezachet || "").trim(),
+    comment: (q.comment || "").trim(),
+    sourceText: (q.source || "").trim(),
+    authors,
+    hasMedia: questionHasMedia(q),
+    hasImage: Boolean(razdatkaPic),
+    sourceImageUrl: imageUrl,
+    multiPart,
+    postable: Boolean(text && answer && !multiPart && !blockingMedia),
+    used: false,
+    usedAt: null,
+    rand: Math.random(),
+    createdAt: FieldValue.serverTimestamp(),
+  };
+}
+
+/** A pack exposes questions either flat or nested under tours. */
+function flattenPackQuestions(pack) {
+  if (Array.isArray(pack.questions) && pack.questions.length) return pack.questions;
+  const out = [];
+  (pack.tours || []).forEach((t) => (t.questions || []).forEach((q) => out.push(q)));
+  return out;
+}
+
+/**
+ * Admin-only: import ЧГК questions from gotquestions.online into questionBank.
+ * Args: { packIds?: (number|string)[], packUrls?: string[], recentPages?: number, max?: number }
+ * Filters out media-bearing questions and dedups by source+sourceId.
+ */
+exports.importGotQuestions = onCall(
+  { timeoutSeconds: 300, memory: "512MiB" },
+  async (request) => {
+    assertAdmin(request);
+    const data = request.data || {};
+    const maxAdd = Math.min(Number(data.max) || 1000, 5000);
+
+    let packIds = parsePackIds(data.packIds, data.packUrls);
+    const recentPages = Math.min(Number(data.recentPages) || 0, 20);
+    for (let page = 1; page <= recentPages; page++) {
+      try {
+        const list = await fetchJson(`${GQ_BASE}/api/packs/?page=${page}`);
+        (list.results || []).forEach((p) => packIds.push(Number(p.id)));
+      } catch (e) {
+        console.error(`packs page ${page} failed: ${e.message}`);
+      }
+    }
+    packIds = Array.from(new Set(packIds)).slice(0, 80);
+    if (packIds.length === 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Provide packIds, packUrls, or recentPages"
+      );
+    }
+
+    // Deterministic doc IDs (gq_<id>) make imports idempotent: create() skips
+    // anything already mirrored without clobbering its used/rand state.
+    let fetched = 0;
+    let added = 0;
+    let duplicates = 0;
+    let skipped = 0;
+
+    for (const pid of packIds) {
+      if (added >= maxAdd) break;
+      let pack;
+      try {
+        pack = await fetchJson(`${GQ_BASE}/api/pack/${pid}/`);
+      } catch (e) {
+        console.error(`pack ${pid} fetch failed: ${e.message}`);
+        continue;
+      }
+      if (!pack) continue;
+      for (const q of flattenPackQuestions(pack)) {
+        if (added >= maxAdd) break;
+        fetched++;
+        const norm = normalizeGqQuestion(q, pack);
+        if (!norm) {
+          skipped++;
+          continue;
+        }
+        try {
+          await db
+            .collection("questionBank")
+            .doc(`gq_${norm.sourceId}`)
+            .create(norm);
+          added++;
+        } catch (e) {
+          if (e.code === 6 || /ALREADY_EXISTS/i.test(e.message || "")) {
+            duplicates++;
+          } else {
+            console.error(`write ${norm.sourceId} failed: ${e.message}`);
+            skipped++;
+          }
+        }
+      }
+    }
+
+    console.log(
+      `importGotQuestions: packs=${packIds.length}, fetched=${fetched}, added=${added}, duplicates=${duplicates}, skipped=${skipped}`
+    );
+    return { packs: packIds.length, fetched, added, duplicates, skipped };
+  }
+);
+
+/** Generate a random 6-char room code (mirrors RoomService._generateRoomCode). */
+function generateRoomCode() {
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += ROOM_CODE_CHARS[Math.floor(Math.random() * ROOM_CODE_CHARS.length)];
+  }
+  return code;
+}
+
+/** Find an unused room code (collision check, like the client). */
+async function uniqueRoomCode() {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const code = generateRoomCode();
+    const doc = await db.collection("rooms").doc(code).get();
+    if (!doc.exists) return code;
+  }
+  return generateRoomCode() + generateRoomCode().slice(0, 2);
+}
+
+/**
+ * Download an external image (e.g. a gotquestions handout) and store it in
+ * Firebase Storage, returning a public tokenized download URL (CORS-friendly,
+ * works on web + mobile). Returns null on failure.
+ */
+async function copyImageToStorage(sourceUrl, destPath) {
+  try {
+    const resp = await fetch(sourceUrl);
+    if (!resp.ok) return null;
+    const buf = Buffer.from(await resp.arrayBuffer());
+    const contentType = resp.headers.get("content-type") || "image/jpeg";
+    const token = randomUUID();
+    const file = getStorage().bucket().file(destPath);
+    await file.save(buf, {
+      metadata: { contentType, metadata: { firebaseStorageDownloadTokens: token } },
+    });
+    const bucket = file.bucket.name;
+    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(destPath)}?alt=media&token=${token}`;
+  } catch (e) {
+    console.error(`image copy failed (${sourceUrl}): ${e.message}`);
+    return null;
+  }
+}
+
+/**
+ * Create one AI-mode team room for a question and auto-join all team members
+ * (mirrors RoomService.createRoom + _autoJoinTeamMembers). Returns the room code.
+ */
+async function createTeamRoomForQuestion(team, members, q) {
+  const code = await uniqueRoomCode();
+  const now = Timestamp.now();
+  const roomRef = db.collection("rooms").doc(code);
+  const batch = db.batch();
+  batch.set(roomRef, {
+    hostId: "system",
+    hostName: team.name || "Qoomy",
+    status: "playing",
+    evaluationMode: "ai",
+    question: q.question,
+    answer: q.answer,
+    comment: q.comment || null,
+    zachet: q.zachet || null,
+    imageUrl: q.imageUrl || null,
+    teamId: team.id,
+    teamName: team.name || null,
+    createdAt: now,
+    lastMessageAt: now,
+  });
+  members.forEach((m) => {
+    batch.set(roomRef.collection("players").doc(m.id), {
+      id: m.id,
+      name: m.name || "",
+      score: 0,
+      joinedAt: now,
+      answer: null,
+      isCorrect: null,
+    });
+  });
+  await batch.commit();
+  return code;
+}
+
+const QUALITY_MODEL = "claude-sonnet-4-20250514";
+
+function qualityPrompt(question, answer, comment) {
+  return `Ты — судья качества вопросов "Что? Где? Когда?" (ЧГК) для ежедневной командной викторины.
+Реши, годится ли вопрос к публикации. Ответь ТОЛЬКО JSON: {"ok": true/false, "reason": "кратко"}
+
+Отклоняй (ok=false), если верно хотя бы одно:
+- Это не вопрос: благодарности ("Автор благодарит..."), указания ведущему ("Ведущему:..."), заголовки туров/блицев, служебный текст.
+- Нужен материал, которого нет в тексте: ссылка на раздаточный материал/картинку/аудио.
+- Сломан, обрезан или непонятен.
+- Ответ отсутствует, пустой или не проверяется по вопросу.
+- Явно слабый: банальный, чрезмерно узкий/нишевый или безнадёжно неоднозначный.
+
+Принимай (ok=true) нормальный самодостаточный вопрос ЧГК с чётким ответом — он не обязан быть шедевром, достаточно крепкого уровня.
+
+Вопрос: ${question}
+Ответ: ${answer}${comment ? `\nКомментарий: ${comment}` : ""}`;
+}
+
+/** AI quality gate: is this a good, postable ЧГК question? Fails open on error. */
+async function evaluateQuestionQuality(question, answer, comment) {
+  if (!process.env.ANTHROPIC_API_KEY) return { ok: true, reason: "no-key" };
+  try {
+    const message = await anthropic.messages.create({
+      model: QUALITY_MODEL,
+      max_tokens: 128,
+      messages: [{ role: "user", content: qualityPrompt(question, answer, comment) }],
+    });
+    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    const json = text.match(/\{[\s\S]*\}/);
+    if (json) {
+      const r = JSON.parse(json[0]);
+      return { ok: Boolean(r.ok), reason: String(r.reason || "") };
+    }
+    return { ok: true, reason: "unparseable" };
+  } catch (e) {
+    console.error("quality eval error:", e.message);
+    return { ok: true, reason: "error" }; // fail open — don't block posting on AI hiccups
+  }
+}
+
+/**
+ * Pick `target` postable, unused questions that pass the AI quality gate.
+ * Rejected questions are flagged used+qualityOk:false so they're never reconsidered.
+ */
+async function pickQualityQuestions(target) {
+  const good = [];
+  const seen = new Set();
+  let guard = 0;
+  while (good.length < target && guard < 100) {
+    guard++;
+    // Draw from a fresh random point in the shuffle each iteration → totally
+    // random selection (not a fixed walk through rand-order).
+    const snap = await db
+      .collection("questionBank")
+      .where("rand", ">=", Math.random())
+      .orderBy("rand")
+      .limit(8)
+      .get();
+    if (snap.empty) continue; // random point landed past the last doc — redraw
+    for (const doc of snap.docs) {
+      if (good.length >= target) break;
+      if (seen.has(doc.id)) continue;
+      seen.add(doc.id);
+      const data = doc.data();
+      if (data.postable !== true || data.used === true || data.status) continue;
+      const cleanedQuestion = cleanQuestionText(data.question);
+      const v = await evaluateQuestionQuality(cleanedQuestion, data.answer, data.comment);
+      if (v.ok) {
+        good.push({ id: doc.id, ...data, question: cleanedQuestion });
+      } else {
+        await doc.ref.update({
+          used: true,
+          usedAt: FieldValue.serverTimestamp(),
+          qualityOk: false,
+          status: "unsuitable",
+          qualityReason: v.reason,
+        });
+        console.log(`quality-rejected ${doc.id}: ${v.reason}`);
+      }
+    }
+  }
+  return good;
+}
+
+/**
+ * Core daily-post logic: pick 10 quality-screened bank questions and create them
+ * as team rooms for every team. Idempotent per Moscow day unless force=true.
+ */
+async function runDailyPost({ force }) {
+  // Today's date in Moscow time (YYYY-MM-DD); en-CA yields ISO-style dates.
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Europe/Moscow",
+  });
+  const setRef = db.collection("dailyQuestionSets").doc(today);
+
+  if (!force) {
+    const existing = await setRef.get();
+    if (existing.exists) {
+      console.log(`Daily questions already posted for ${today}`);
+      return { skipped: true, date: today };
+    }
+  }
+
+  const questions = await pickQualityQuestions(10);
+  if (questions.length === 0) {
+    console.warn("No questions passed the quality gate — nothing to post");
+    return { posted: 0, date: today, reason: "empty-bank" };
+  }
+  if (questions.length < 10) {
+    console.warn(`Only ${questions.length} questions passed the quality gate (<10)`);
+  }
+
+  // Ensure handout images are in Storage (skip if already copied by the eager
+  // scrape — q.imageUrl already set). Copy once per question, reused across teams.
+  for (const q of questions) {
+    if (q.sourceImageUrl && !q.imageUrl) {
+      q.imageUrl = await copyImageToStorage(q.sourceImageUrl, `dailyImages/${q.id}.jpg`);
+    }
+  }
+
+  const teamsSnap = await db.collection("teams").get();
+  let roomsCreated = 0;
+
+  for (const teamDoc of teamsSnap.docs) {
+    const team = { id: teamDoc.id, name: teamDoc.data().name };
+    try {
+      const membersSnap = await db
+        .collection("teams")
+        .doc(team.id)
+        .collection("members")
+        .get();
+      const members = membersSnap.docs.map((m) => ({
+        id: m.get("id") || m.id,
+        name: m.get("name"),
+      }));
+      for (const q of questions) {
+        await createTeamRoomForQuestion(team, members, q);
+        roomsCreated++;
+      }
+    } catch (e) {
+      console.error(`Failed posting to team ${team.id}: ${e.message}`);
+    }
+  }
+
+  // Mark the posted questions so they aren't reposted.
+  const markBatch = db.batch();
+  questions.forEach((q) => {
+    markBatch.update(db.collection("questionBank").doc(q.id), {
+      used: true,
+      usedAt: FieldValue.serverTimestamp(),
+      qualityOk: true,
+      status: "posted",
+    });
+  });
+  await markBatch.commit();
+
+  await setRef.set(
+    {
+      date: today,
+      questionIds: questions.map((q) => q.id),
+      teamsCount: teamsSnap.size,
+      roomsCreated,
+      postedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  console.log(
+    `Daily post ${today}: teams=${teamsSnap.size}, questions=${questions.length}, rooms=${roomsCreated}`
+  );
+  return { posted: questions.length, teams: teamsSnap.size, roomsCreated, date: today };
+}
+
+/** Scheduled: post the daily set to every team at 09:00 Europe/Moscow. */
+exports.postDailyTeamQuestions = onSchedule(
+  {
+    schedule: "0 9 * * *",
+    timeZone: "Europe/Moscow",
+    timeoutSeconds: 540,
+    memory: "512MiB",
+    secrets: ["ANTHROPIC_API_KEY"],
+  },
+  async () => {
+    await runDailyPost({ force: false });
+  }
+);
+
+/**
+ * Admin-only manual trigger (for testing from the admin panel).
+ * Defaults to force=true so a click always posts a fresh set of 10.
+ * Pass { force: false } to respect the once-per-day idempotency guard.
+ */
+exports.postDailyTeamQuestionsNow = onCall(
+  { timeoutSeconds: 540, memory: "512MiB", secrets: ["ANTHROPIC_API_KEY"] },
+  async (request) => {
+    assertAdmin(request);
+    const force = !(request.data && request.data.force === false);
+    return await runDailyPost({ force });
+  }
+);

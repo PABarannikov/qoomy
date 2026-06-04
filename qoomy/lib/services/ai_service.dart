@@ -13,6 +13,7 @@ class AiService {
     required String roomCode,
     required String messageId,
     required String playerId,
+    String? acceptableAnswers,
   }) async {
     try {
       final callable = _functions.httpsCallable('evaluateAnswerWithAI');
@@ -23,6 +24,8 @@ class AiService {
         'roomCode': roomCode,
         'messageId': messageId,
         'playerId': playerId,
+        if (acceptableAnswers != null && acceptableAnswers.isNotEmpty)
+          'acceptableAnswers': acceptableAnswers,
       });
 
       final data = result.data as Map<String, dynamic>;
