@@ -182,9 +182,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: _selectedTeamId != null
-              ? QoomyTheme.primaryColor.withOpacity(0.1)
-              : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
+          color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _selectedTeamId != null
@@ -216,7 +214,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     value: t.id,
                     child: Row(
                       children: [
-                        const Icon(Icons.group, size: 18, color: Colors.blue),
+                        const Icon(Icons.group, size: 18, color: QoomyTheme.primaryColor),
                         const SizedBox(width: 8),
                         Expanded(child: Text(t.name, overflow: TextOverflow.ellipsis)),
                       ],
