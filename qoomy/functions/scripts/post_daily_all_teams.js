@@ -86,11 +86,13 @@ async function createRoomForTeam(team, members, q) {
   questions.forEach((q) => console.log(`   ${q.id} ${q.hasImage ? "[img] " : ""}${(q.question || "").replace(/\n/g, " ").slice(0, 60)}`));
 
   const teamsSnap = await db.collection("teams").get();
-  let roomsCreated = 0;
+  let roomsCreated = 0, postedTeams = 0;
   for (const teamDoc of teamsSnap.docs) {
+    if (teamDoc.data().excludeDaily === true) { console.log(`  → "${teamDoc.data().name}" skipped (excludeDaily)`); continue; }
     const team = { id: teamDoc.id, name: teamDoc.data().name };
     const members = (await db.collection("teams").doc(team.id).collection("members").get()).docs.map((m) => ({ id: m.get("id") || m.id, name: m.get("name") }));
     for (const q of questions) { await createRoomForTeam(team, members, q); roomsCreated++; }
+    postedTeams++;
     console.log(`  → "${team.name}" (${members.length} members): ${questions.length} rooms`);
   }
 
@@ -98,8 +100,8 @@ async function createRoomForTeam(team, members, q) {
   for (const q of questions) mb.update(db.collection("questionBank").doc(q.id), { used: true, usedAt: FieldValue.serverTimestamp(), qualityOk: true, status: "posted" });
   await mb.commit();
 
-  await db.collection("dailyQuestionSets").doc(today).set({ date: today, questionIds: questions.map((q) => q.id), teamsCount: teamsSnap.size, roomsCreated, postedAt: FieldValue.serverTimestamp(), manual: true }, { merge: true });
+  await db.collection("dailyQuestionSets").doc(today).set({ date: today, questionIds: questions.map((q) => q.id), teamsCount: postedTeams, roomsCreated, postedAt: FieldValue.serverTimestamp(), manual: true }, { merge: true });
 
-  console.log(`\nDone. Posted the same ${questions.length} questions to ${teamsSnap.size} teams (${roomsCreated} rooms). Recorded dailyQuestionSets/${today}.`);
+  console.log(`\nDone. Posted the same ${questions.length} questions to ${postedTeams} teams (${roomsCreated} rooms). Recorded dailyQuestionSets/${today}.`);
   process.exit(0);
 })().catch((e) => { console.error(e); process.exit(1); });

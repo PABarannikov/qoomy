@@ -1219,8 +1219,10 @@ async function runDailyPost({ force }) {
 
   const teamsSnap = await db.collection("teams").get();
   let roomsCreated = 0;
+  let postedTeams = 0;
 
   for (const teamDoc of teamsSnap.docs) {
+    if (teamDoc.data().excludeDaily === true) continue; // team opted out of daily questions
     const team = { id: teamDoc.id, name: teamDoc.data().name };
     try {
       const membersSnap = await db
@@ -1236,6 +1238,7 @@ async function runDailyPost({ force }) {
         await createTeamRoomForQuestion(team, members, q);
         roomsCreated++;
       }
+      postedTeams++;
     } catch (e) {
       console.error(`Failed posting to team ${team.id}: ${e.message}`);
     }
@@ -1257,7 +1260,7 @@ async function runDailyPost({ force }) {
     {
       date: today,
       questionIds: questions.map((q) => q.id),
-      teamsCount: teamsSnap.size,
+      teamsCount: postedTeams,
       roomsCreated,
       postedAt: FieldValue.serverTimestamp(),
     },
@@ -1267,7 +1270,7 @@ async function runDailyPost({ force }) {
   console.log(
     `Daily post ${today}: teams=${teamsSnap.size}, questions=${questions.length}, rooms=${roomsCreated}`
   );
-  return { posted: questions.length, teams: teamsSnap.size, roomsCreated, date: today };
+  return { posted: questions.length, teams: postedTeams, roomsCreated, date: today };
 }
 
 /** Scheduled: post the daily set to every team at 09:00 Europe/Moscow. */
