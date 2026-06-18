@@ -18,6 +18,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   bool _isDeleting = false;
   bool _isMigrating = false;
   String _searchQuery = '';
+  int _roomLimit = 50;
   int? _bankTotal;
   int? _bankUnused;
   bool _isImporting = false;
@@ -617,103 +618,127 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   }
 
   Widget _buildRoomsList() {
+    final bool isSearching = _searchQuery.isNotEmpty;
+    // Search: query Firestore by room-code (document id) prefix across ALL rooms,
+    // not just the loaded recent ones. Default: paginated by a growing limit.
+    final Stream<QuerySnapshot> stream = isSearching
+        ? _firestore
+            .collection('rooms')
+            .where(FieldPath.documentId, isGreaterThanOrEqualTo: _searchQuery)
+            .where(FieldPath.documentId, isLessThan: _searchQuery + String.fromCharCode(0xf8ff))
+            .limit(50)
+            .snapshots()
+        : _firestore
+            .collection('rooms')
+            .orderBy('createdAt', descending: true)
+            .limit(_roomLimit)
+            .snapshots();
+
     return StreamBuilder<QuerySnapshot>(
-      stream: _firestore
-          .collection('rooms')
-          .orderBy('createdAt', descending: true)
-          .limit(100)
-          .snapshots(),
+      stream: stream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No rooms found'));
-        }
-
-        var rooms = snapshot.data!.docs;
-        if (_searchQuery.isNotEmpty) {
-          rooms = rooms.where((doc) => doc.id.toUpperCase().contains(_searchQuery)).toList();
-        }
-
+        final rooms = snapshot.data?.docs ?? [];
         if (rooms.isEmpty) {
-          return const Center(child: Text('No rooms found'));
+          return Center(
+            child: Text(
+              isSearching ? 'No rooms matching "$_searchQuery"' : 'No rooms found',
+              style: TextStyle(color: Colors.grey.shade600),
+              textAlign: TextAlign.center,
+            ),
+          );
         }
 
+        final canLoadMore = !isSearching && rooms.length >= _roomLimit;
         return ListView.builder(
-          itemCount: rooms.length,
+          itemCount: rooms.length + (canLoadMore ? 1 : 0),
           itemBuilder: (context, index) {
-            final roomDoc = rooms[index];
-            final data = roomDoc.data() as Map<String, dynamic>;
-            final roomCode = roomDoc.id;
-            final question = data['question'] as String? ?? '';
-            final status = data['status'] as String? ?? 'unknown';
-            final evaluationMode = data['evaluationMode'] as String? ?? 'manual';
-            final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
-
-            return ListTile(
-              selected: _selectedRoomCode == roomCode,
-              selectedTileColor: QoomyTheme.primaryColor.withOpacity(0.1),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: QoomyTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      roomCode,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (evaluationMode == 'ai')
-                    Icon(Icons.smart_toy, size: 16, color: Colors.deepPurple.shade400),
-                ],
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    question,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _buildStatusBadge(status),
-                      const Spacer(),
-                      if (createdAt != null)
-                        Text(
-                          _formatDate(createdAt),
-                          style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20),
-                color: Colors.red.shade400,
-                tooltip: 'Delete room',
-                onPressed: () => _deleteRoom(roomCode),
-              ),
-              onTap: () {
-                setState(() {
-                  _selectedRoomCode = roomCode;
-                });
-              },
-            );
+            if (index >= rooms.length) {
+              return Padding(
+                padding: const EdgeInsets.all(8),
+                child: OutlinedButton.icon(
+                  onPressed: () => setState(() => _roomLimit += 50),
+                  icon: const Icon(Icons.expand_more, size: 18),
+                  label: Text('Load more (${rooms.length} shown)'),
+                ),
+              );
+            }
+            return _buildRoomTile(rooms[index]);
           },
         );
+      },
+    );
+  }
+
+  Widget _buildRoomTile(DocumentSnapshot roomDoc) {
+    final data = roomDoc.data() as Map<String, dynamic>;
+    final roomCode = roomDoc.id;
+    final question = data['question'] as String? ?? '';
+    final status = data['status'] as String? ?? 'unknown';
+    final evaluationMode = data['evaluationMode'] as String? ?? 'manual';
+    final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+
+    return ListTile(
+      selected: _selectedRoomCode == roomCode,
+      selectedTileColor: QoomyTheme.primaryColor.withOpacity(0.1),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: QoomyTheme.primaryColor,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              roomCode,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (evaluationMode == 'ai')
+            Icon(Icons.smart_toy, size: 16, color: Colors.deepPurple.shade400),
+        ],
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            question,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              _buildStatusBadge(status),
+              const Spacer(),
+              if (createdAt != null)
+                Text(
+                  _formatDate(createdAt),
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                ),
+            ],
+          ),
+        ],
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.delete_outline, size: 20),
+        color: Colors.red.shade400,
+        tooltip: 'Delete room',
+        onPressed: () => _deleteRoom(roomCode),
+      ),
+      onTap: () {
+        setState(() {
+          _selectedRoomCode = roomCode;
+        });
       },
     );
   }
